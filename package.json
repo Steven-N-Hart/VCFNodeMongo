@@ -1,0 +1,23 @@
+{
+  "name": "VCFNodeMongo",
+  "version": "0.0.0",
+  "description": "Javascript parser for VCF files",
+  "main": "VCF_sampleParse.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Steven-N-Hart/VCFNodeMongo.git"
+  },
+  "dependencies":{
+  	"mongodb": "2.0",
+	"node-gyp" : "*"
+  },
+  "author": "Steven N. Hart, PhD",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Steven-N-Hart/VCFNodeMongo/issues"
+  },
+  "homepage": "https://github.com/Steven-N-Hart/VCFNodeMongo"
+}
