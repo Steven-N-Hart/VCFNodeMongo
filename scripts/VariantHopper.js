@@ -2,7 +2,7 @@
 
 var thisScript = require('commander');
 /*
- * require other scripts...transform to functions only, and call functions from here
+ * require those other scripts...transform to functions only, and call functions from here
  */
 
 thisScript

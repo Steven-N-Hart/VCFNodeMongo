@@ -4,3 +4,6 @@ CommandLine Parsing
 https://github.com/tj/commander.js
 
 
+
+Goals:
+Make setup & Install as easy as possible.
