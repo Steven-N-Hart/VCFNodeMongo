@@ -10,9 +10,10 @@
     "type": "git",
     "url": "https://github.com/Steven-N-Hart/VCFNodeMongo.git"
   },
-  "dependencies":{
-  	"mongodb": "2.0",
-	"node-gyp" : "*"
+  "dependencies": {
+    "commander": "^2.8.1",
+    "mongodb": "2.0",
+    "node-gyp": "*"
   },
   "author": "Steven N. Hart, PhD",
   "license": "MIT",
