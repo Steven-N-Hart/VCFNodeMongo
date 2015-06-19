@@ -10,5 +10,12 @@ Scripts I have right now:
 	Known issues:
 		Doesn't automatically close when finished
 
-1. VCF_export.js
+2. VCF_export.js  
+
 	Was working for another project but needs to be modified for this one
+
+
+
+Other notes:
+	#This is how I inserted the meatdb for now.
+	/c/Program\ Files/MongoDB/Server/3.0/bin/mongoimport.exe --db dev --collection meta --type tsv --headerline --file examples/SampleMeta.txt

@@ -65,7 +65,7 @@ var processLines = function (line, db){
 
 var findDocument = function(OBJ,setQuery1, setQuery2, db) {
   // Get the documents collection
-  var collection = db.collection('documents');
+  var collection = db.collection('variants');
   
   // Insert some documents
   collection.findOne(

@@ -2,6 +2,10 @@
 /*jshint -W069 */
 'use strict';
 
+// Connection URL
+var url = 'mongodb://localhost:27017/dev';
+//async = require("async");
+
 var MongoClient = require('mongodb').MongoClient , assert = require('assert');
 var mongoServer = require('mongodb').Server;
 var serverOptions = {
@@ -43,86 +47,99 @@ var stream = fs.createWriteStream(output);
 
 
 // Split each study id and sample id and put quotes around them
-var studyIDs = [];
-studyIDs = studyID.split(',');
-studyIDs=studyIDs.join(',');
+var studyIDs = studyID.split(",");
 
-//Create sample array
-var sampleIDs =[];
 
+//Step0.  Print header
+
+//Step1.  Make sure the study ID exists in db
+getHeader(studyIDs);
+//Step2.  Get the sample IDs from DB
+//Step3.  Print out the header
+//Step4.  Get the variants
+//Step5.  Print each variant row
+
+
+
+//process.exit();
 //Create basic object to use when outputing Samples in VCF
 var samplesObj = [];
+var SAMPLES = [];
 
-
-// Connection URL
-
-var url = 'mongodb://localhost:27017/main';
-MongoClient.connect(url, function(err, db) {
-	assert.equal(null, err);
-  	console.log('Connected correctly to server');
-  	printHeader();
-  	//stream.once('open', function(fd) {
-		getStudyIDs(db,testGlobal);
-	});
-//});
 
 ///////////////////////////////////////
 // Build functions
-var getStudyIDs = function(db,callback) {
-  // Get the documents collection
-  var collection = db.collection('variants');
-  //Get all the possible studIDs from DB and put into an array
-	collection.distinct('studies.study_id', function(err, result) {
-		console.log('Availalble Studies ' + result);
-		collection.distinct('studies.samples.sample',function(err, SAMPLES) {
-			if (err){console.log('Cannot get the sample names from db');}
-			sampleIDs = SAMPLES;
-			var HEADER_LINE='#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT';
-			for (var i=0;i<SAMPLES.length;i++){
-				HEADER_LINE=HEADER_LINE+'\t'+SAMPLES[i];
-			}
+function getHeader(studyIDs){
+    printHeader();
+    getSamples(studyIDs)
+  };
 
-			stream.write(HEADER_LINE+'\n');
-		});
-    	callback(db,result);
-  	});  
-};
 
-function testGlobal(db,data){
-	//find out if my studyID/sample_ID matches what is in my array
-	findStringInArray(studyIDs,data,printStudies,db);
+// Use connect method to connect to the Server to get the sample ids i need to look for
+function getSamples(studyIDs,cb){
+  MongoClient.connect(url, function(err, db) {
+    assert.equal(null, err);
+    //console.log('Connected')
+    var collection = db.collection('meta');
+       collection.find({'studyID' : {$in:studyIDs}},{'_id':0,'sample_id':1}).toArray(
+            function(err, documents) {
+              for (var j=0; j<documents.length;j++){
+              //console.log('res='+documents[j].sample_id);
+              SAMPLES.push(documents[j].sample_id);
+            }
+            //console.log('res='+SAMPLES);
+            //db.close();
+            printHeaderLine(db,SAMPLES,printVariants(SAMPLES,db))
+            }
+        );
+  });
 }
 
-function findStringInArray(str, res, cb, db) {
-	var Strings = str.split(',');
-	var arr = res.toString();
-	var Arr = arr.split(',');
-	for (var j = 0; j < Strings.length; j++){
-		var matchCount = 0;
-	    for (var i = 0; i < Arr.length; i++) {
-	        if (Arr[i] === Strings[j]) {
-	        	matchCount++;
-	        }
-	    }
-	    if(matchCount > 0){
-	    	console.log('Study found = '+ Strings[j]);
-	    }
-	    else{
-	    	console.log('Study not found = ' + Strings[j]);  
-	    	throw 'Study is not in the list';  	
-	    }
-	}
-	cb(Strings,db);
-}
 
-function printStudies(studies,db){
+
+
+function printHeaderLine(db,SAMPLES,callback) {
+	var HEADER_LINE='#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT';
+	for (var i=0;i<SAMPLES.length;i++){
+		HEADER_LINE=HEADER_LINE+'\t'+SAMPLES[i];
+		}
+	console.log(HEADER_LINE);
+	stream.write(HEADER_LINE+'\n');
+	printVariants(SAMPLES,db);
+  	};
+
+
+
+
+
+function printVariants(SAMPLES,db){
 	var collection = db.collection('variants');
-	studyIDs = studyID.split(',');
-	//studyIDs=studyIDs = '\'' + studyIDs.join('\',\'') + '\'';
-  	var cursor = collection.find({'studies.study_id': {$in :  studies }});
-  	 cursor.each(function(err,res){
-   		if(err){console.log('err = ' + err);}
-   		//console.log('res = '+JSON.stringify(res));
+	//console.log('studies = '+studies);
+  	var cursor = collection.aggregate([
+      {$match : {
+        'samples.sample':{
+            $in:SAMPLES
+          }
+      }},
+      {
+          $unwind:"$samples"
+      },
+      {
+        $match:{
+          'samples.sample':{
+              $in:SAMPLES
+          }
+        }
+      },
+      {
+        $group:{
+            _id:{chr:'$chr',pos:'$pos',ref:'$ref',alt:'$alt'},samples:{$push:'$samples'}
+        }
+      }
+      ]);
+  	cursor.each(function(err,res){
+   		if(err){console.log('err = ' + err)}
+ // process.exit();
 		var variants = res;
 		if(res !== null){
    		//variants= JSON.parse(variants);
@@ -130,47 +147,54 @@ function printStudies(studies,db){
    		var pos = variants._id.pos;
    		var ref = variants._id.ref;
    		var alt = variants._id.alt;
-   		var FORMAT_FIELDS = [];
+   		var FORMAT_FIELDS = {};
    		var studyAN=0;
    		var studyAC=0;
-   		var len = variants.studies.length;
-   		console.log('len = '+ len);
-   		for (var whichStudy=0;whichStudy < len ;whichStudy++){
-   		//console.log('variants.studies = '+ variants.studies);
-   		//console.log('variants.studies = '+ variants.studies.length);
-   		var STUDIES = variants.studies[whichStudy];
-   		//Number of samples with mutation 
-   		//console.log('STUDIES. = '+JSON.stringify(variants.studies));
-   		for (var j=0; j < STUDIES.samples.length; j++){
-	   			if (STUDIES.samples[j].GT === undefined || STUDIES.samples[j].GT == './.'|| STUDIES.samples[j].GT == '.' ){
-	   				STUDIES.samples[j].GT='.';
-	   				//console.log('No data for '+JSON.stringify(STUDIES.samples[j]));
-	   			}
-	   			else{
-	   				studyAN++;studyAN++;
-	   			}
-	   			//Add 1 for heterozygous
-	   			if (STUDIES.samples[j].GT == '0/1' || STUDIES.samples[j].GT == '0|1'||STUDIES.samples[j].GT == '1/0' || STUDIES.samples[j].GT == '1|0' ){
-	   				studyAC++;
-	   				//console.log('Added 1')
-	   			}
-	   			//Add 2 for homozygous
-	   			if (STUDIES.samples[j].GT == '1/1' || STUDIES.samples[j].GT == '1|1' == '1/1' || STUDIES.samples[j].GT == '1|1' ){
-	   				studyAC++;
-	   				studyAC++;
-	   				//console.log('Added 2')
-	   			}
-	   			if (STUDIES.samples[j].AD === undefined){STUDIES.samples[j].AD='.';}
-	   			if(	Array.isArray(STUDIES.samples[j].AD)){ STUDIES.samples[j].AD = STUDIES.samples[j].AD.join();}
-	   			if (STUDIES.samples[j].DP === undefined){STUDIES.samples[j].DP='.';}
-	   			if (STUDIES.samples[j].GQ === undefined){STUDIES.samples[j].GQ='.';}
-	   			if (STUDIES.samples[j].HQ === null){STUDIES.samples[j].HQ='.';}
-	   				if (STUDIES.samples[j].HQ == ','||STUDIES.samples[j].HQ ===undefined){STUDIES.samples[j].HQ = '.';}
-	   			var formatData = STUDIES.samples[j].GT+':'+STUDIES.samples[j].AD+':'+STUDIES.samples[j].DP+':'+STUDIES.samples[j].GQ+':'+STUDIES.samples[j].HQ;
-	   			FORMAT_FIELDS.push(formatData);
+   		//Get number of samples in study
+   		var len = variants.samples.length;
+   		//console.log('len = '+ len);
+
+   		//loop over each sample results
+   		for (var whichSample=0;whichSample < len ;whichSample++){
+   			var SAMPLE = variants.samples[whichSample];
+
+   			var a = studyIDs.indexOf(SAMPLE.study_id);
+   			//console.log('a='+a)
+   			//if a < 0, then the sample is not supposed to be exported
+   			if (a < 0){
+   				//console.log('This is not in query');
+   				break
+   			}
+        var sampleObj = new sampleData(SAMPLE.sample,SAMPLE.GT, SAMPLE.GQ, SAMPLE.HQ, SAMPLE.PL, SAMPLE.AD, SAMPLE.DP)
+
+   			//Calcuacate AC and AN
+   			if (sampleObj.GT === undefined || sampleObj.GT == './.'|| sampleObj.GT == '.' ){
+	   			sampleObj.GT='.';
+	   			studyAN++;studyAN++;
 	   		}
-	   	}
-	   	console.log(FORMAT_FIELDS)
+	   	   	//Add 1 for heterozygous
+	   		if (sampleObj.GT == '0/1' || sampleObj.GT == '0|1'||sampleObj.GT == '1/0' || sampleObj.GT == '1|0' ||sampleObj.GT == './1' ){
+	   			studyAC++;studyAN++;studyAN++;
+	   			//console.log('Added 1')
+	   		}
+	   		//Add 2 for homozygous
+	   		if (sampleObj.GT == '1/1' || sampleObj.GT == '1|1'  ){
+	   			studyAC++;
+	   			studyAC++;studyAN++;studyAN++;
+	   		}
+	   		var formatData = sampleObj.GT+':'+sampleObj.AD+':'+sampleObj.DP+':'+sampleObj.GQ+':'+sampleObj.HQ;
+      //console.log(JSON.stringify(sampleObj))
+	   		FORMAT_FIELDS[sampleObj.sample] = formatData ;
+
+	   	}//All samples have been evaluated
+	   	console.log(JSON.stringify(FORMAT_FIELDS))
+  process.exit();
+//Still need to control for when samples dont have data!!!!
+
+
+
+
+
 
    		//console.log('studyAC = '+ studyAC + ' StudyAN = ' + studyAN);
    		var studyAF=0;
@@ -182,10 +206,8 @@ function printStudies(studies,db){
    		FULL_LINE.push(chrom,pos,'.', ref,alt,'.','.',INFO_LINE,'GT:AD:DP:GQ:HQ',FORMAT_FIELDS);
    		var fullLine = FULL_LINE.join('\t');
    		stream.write(fullLine+'\n');
-   	}
-   	else{
-   		stream.end();
-   		db.close();
+   		console.log(fullLine)
+
    	}
    	});
 }
@@ -204,5 +226,43 @@ function printHeader(){
 
 
 
- 
+ function sampleData(sample, GT, GQ, HQ, PL, AD, DP) {
+    this.GT = isDefined(GT);
+    this.GQ = isDefined(GQ);
+    this.HQ = isDefined(HQ);
+    this.PL = isDefined(PL);
+    this.AD = isDefined(AD);
+    this.DP = isDefined(DP);
+    this.sample = sample;
+}
 
+function isDefined(query){
+  if (query === undefined){
+    return '.'
+  }
+  else{
+    return query
+  }
+}
+
+function findStringInArray(str, res, cb, db) {
+  var Strings = str.split(',');
+  var arr = res.toString();
+  var Arr = arr.split(',');
+  for (var j = 0; j < Strings.length; j++){
+    var matchCount = 0;
+      for (var i = 0; i < Arr.length; i++) {
+          if (Arr[i] === Strings[j]) {
+            matchCount++;
+          }
+      }
+      if(matchCount > 0){
+        console.log('Study found = '+ Strings[j]);
+      }
+      else{
+        console.log('Study not found = ' + Strings[j]);  
+        throw 'Study is not in the list';   
+      }
+  }
+  cb(Strings,db);
+}
