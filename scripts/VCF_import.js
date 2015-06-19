@@ -3,7 +3,22 @@
 'use strict';
 
 
+var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
+var url = 'mongodb://localhost:27017/dev';
+
+//Make sure are variables are set
+if(typeof process.argv[2] === 'undefined') {
+  console.log('Usage: VCF_import.js <vcf_file> <study_name>');
+  process.exit();
+}
+
+//Make sure are variables are set
+if(typeof process.argv[3] === 'undefined') {
+  console.log('Usage: VCF_import.js <vcf_file> <study_name>');
+  process.exit();
+}
+
 
 //Get study ID
 var study_id = process.argv[3];
@@ -12,17 +27,9 @@ var Header = [];
 var sampleNames = [];
 
 
-MongoClient.open(function(err, mongoClient) {
-    var db1 = mongoClient.db(config.db.name);
-
-
-
-    mongoClient.close();
-});
-
 
 // Use connect method to connect to the Server
-/*MongoClient.connect(url, function(err, db) {
+MongoClient.connect(url, function(err, db) {
   assert.equal(null, err);
   var LineByLineReader = require('line-by-line');
   var lr = new LineByLineReader(process.argv[2]);
@@ -34,17 +41,21 @@ MongoClient.open(function(err, mongoClient) {
   lr.on('line', function (line) {
       // 'line' contains the current line without the trailing newline character.
          processLines(line , db);
-      });
-  lr.on('end', function () {
-    console.log('Done');
-    //db.close();
   });
-});*/
+  lr.on('end', function (line){
+    //closeDB(db)
+    }
+  )
+});
 /*##################################################################
 
 # Define functions
 
 ####################################################################*/
+function closeDB(db){
+ setTimeout( db.close(), 10000)
+}
+
 //Process line
 var processLines = function (line, db){
     var res = parseInputLine(line);
