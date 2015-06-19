@@ -1,9 +1,15 @@
 Third Party Dependencies:
 
-CommandLine Parsing
-https://github.com/tj/commander.js
+    CommandLine Parsing
+    https://github.com/tj/commander.js
 
 
 
 Goals:
-Make setup & Install as easy as possible.
+    Make setup & Install as easy as possible.
+
+
+
+
+Notes:
+    BTW, that GYP package is a pain.  I had to hard-code fix a line to get it to work.
