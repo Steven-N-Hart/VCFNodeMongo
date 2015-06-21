@@ -1,0 +1,4 @@
+sample	study	kit	Extra
+EX2	TEST	KIT1	placeholder
+EX3	TEST	KIT1
+EX1	TEST	KIT1	with spaces
