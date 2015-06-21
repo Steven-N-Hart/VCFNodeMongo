@@ -21,7 +21,7 @@ Scripts I have right now:
 
 This script takes a VCF and imports it into the mongodb database
 
-	Known issues:
+* Known issues:
 		Doesn't automatically close when finished
 
 #### 2. VCF_export.js  
@@ -29,7 +29,7 @@ This script takes a VCF and imports it into the mongodb database
 
 This script extracts the VCF from the samples in the study name.  It can be either 1 study, or a comma separated list of studies.
 
-	Known issues:
+* Known issues:
 		Seems to be working, but I have a hacky process.exit in there that I don't quite like
 
 
@@ -40,6 +40,6 @@ This script takes a TSV file containing sample information and loads it into the
 The TSV requires 3 fields: sample, study, and kit.
 Anything else is optional (e.g. case or control, substudy, etc)
 
-	Known issues:
+* Known issues:
 		Doesn't automatically close when finished
 		The SYNC isnt coded correctly.  It just loads the last line of metadata multiple times
