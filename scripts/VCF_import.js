@@ -2,29 +2,50 @@
 /*jshint -W069 */
 'use strict';
 
-
+var CmdLineOpts = require('commander');
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
-var url = 'mongodb://localhost:27017/dev';
+var config = require('./config.json');
+var url = 'mongodb://'+config.db.host+':'+config.db.port+'/'+config.db.name;
+
+
+/*
+ * Setup Commandline options, auto generates help
+ */
+CmdLineOpts
+    .version('0.0.1')
+    .option('-i, --input', 'VCF file to be processed')
+    .option('-n, --studyname', 'Study Name, for importing')
+    .parse(process.argv);
+
+
 
 //Make sure are variables are set
-if(typeof process.argv[2] === 'undefined') {
-  console.log('Usage: VCF_import.js <vcf_file> <study_name>');
-  process.exit();
+if(!CmdLineOpts.input) {
+    console.log("Missing Input VCF file.")
+    CmdLineOpts.outputHelp();
+    process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
 }
 
-//Make sure are variables are set
-if(typeof process.argv[3] === 'undefined') {
-  console.log('Usage: VCF_import.js <vcf_file> <study_name>');
-  process.exit();
+if(!CmdLineOpts.studyname) {
+    console.log("Missing Study Name.")
+    CmdLineOpts.outputHelp();
+    process.exit(27);
 }
 
 
 //Get study ID
-var study_id = process.argv[3];
+var study_id = CmdLineOpts.studyname;
 //Call the main DB to make sure it exists and get its uniq id and get its KitID
 var Header = [];
 var sampleNames = [];
+
+/*
+ * Setup Database connection(s)
+ */
+//var mongoClient = new
+// MongoClient(new Server(config.db.host, config.db.port));
+
 
 
 
@@ -32,7 +53,7 @@ var sampleNames = [];
 MongoClient.connect(url, function(err, db) {
   assert.equal(null, err);
   var LineByLineReader = require('line-by-line');
-  var lr = new LineByLineReader(process.argv[2]);
+  var lr = new LineByLineReader(CmdLineOpts.input);
   lr.on('error', function (err) {
       // 'err' contains error object
       console.log('error = '+ err);
