@@ -19,6 +19,9 @@ CmdLineOpts
     .option('-n, --studyname [text]', 'Study Name, for importing')
     .parse(process.argv);
 
+var ts1 = process.hrtime();
+
+
 //Make sure are variables are set
 if(!CmdLineOpts.input) {
     console.log("Missing Input VCF file.")
@@ -32,14 +35,11 @@ if(!CmdLineOpts.studyname) {
     process.exit(27);
 }
 
-
 //Get study ID
 var study_id = CmdLineOpts.studyname;
 //Call the main DB to make sure it exists and get its uniq id and get its KitID
 var Header = [];
 var sampleNames = [];
-
-var ts1 = process.hrtime();
 
 
 // Use connect method to connect to the Server
@@ -48,10 +48,8 @@ MongoClient.connect(url, function(err, db) {
   var LineByLineReader = require('line-by-line');
   var lr = new LineByLineReader(CmdLineOpts.input);
   lr.on('error', function (err) {
-      // 'err' contains error object
-      console.log('error = '+ err);
+      console.error(err);
   });
-
   lr.on('line', function (line) {
       // 'line' contains the current line without the trailing newline character.
          processLines(line , db);
