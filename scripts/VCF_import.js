@@ -12,13 +12,13 @@ var url = 'mongodb://'+config.db.host+':'+config.db.port+'/'+config.db.name;
 /*
  * Setup Commandline options, auto generates help
  */
+var StudyTitle = '';
 CmdLineOpts
     .version('0.0.1')
-    .option('-i, --input', 'VCF file to be processed')
-    .option('-n, --studyname', 'Study Name, for importing')
+    .usage('[options] -i <file>')
+    .option('-i, --input [file]', 'VCF file to be processed')
+    .option('-n, --studyname [text]', 'Study Name, for importing')
     .parse(process.argv);
-
-
 
 //Make sure are variables are set
 if(!CmdLineOpts.input) {
