@@ -6,7 +6,7 @@ var CmdLineOpts = require('commander');
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var config = require('./config.json');
-var url = 'mongodb://'+config.db.host+':'+config.db.port+'/'+config.db.name;
+var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
 
 
 /*
@@ -23,14 +23,14 @@ var ts1 = process.hrtime();
 
 
 //Make sure are variables are set
-if(!CmdLineOpts.input) {
-    console.log("Missing Input VCF file.")
+if (!CmdLineOpts.input) {
+    console.log("Missing Input VCF file.");
     CmdLineOpts.outputHelp();
     process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
 }
 
-if(!CmdLineOpts.studyname) {
-    console.log("Missing Study Name.")
+if (!CmdLineOpts.studyname) {
+    console.log("Missing Study Name.");
     CmdLineOpts.outputHelp();
     process.exit(27);
 }
@@ -43,7 +43,7 @@ var sampleNames = [];
 
 
 // Use connect method to connect to the Server
-MongoClient.connect(url, function(err, db) {
+MongoClient.connect(url, function (err, db) {
   assert.equal(null, err);
   var LineByLineReader = require('line-by-line');
   var lr = new LineByLineReader(CmdLineOpts.input);

@@ -8,6 +8,9 @@ Third Party Dependencies:
 Goals:
     Make setup & Install as easy as possible.
 
+    Write good quality code: JSHint
+    http://blog.teamtreehouse.com/improving-code-quality-jshint
+
 
 
 
