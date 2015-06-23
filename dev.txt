@@ -13,3 +13,6 @@ Goals:
 
 Notes:
     BTW, that GYP package is a pain.  I had to hard-code fix a line to get it to work.
+
+A good read for node.js CLI dev:
+http://techblog.chegg.com/2013/10/14/nodejs_for_commandline_developers/

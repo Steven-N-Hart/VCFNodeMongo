@@ -12,7 +12,6 @@ var url = 'mongodb://'+config.db.host+':'+config.db.port+'/'+config.db.name;
 /*
  * Setup Commandline options, auto generates help
  */
-var StudyTitle = '';
 CmdLineOpts
     .version('0.0.1')
     .usage('[options] -i <file>')
@@ -40,13 +39,7 @@ var study_id = CmdLineOpts.studyname;
 var Header = [];
 var sampleNames = [];
 
-/*
- * Setup Database connection(s)
- */
-//var mongoClient = new
-// MongoClient(new Server(config.db.host, config.db.port));
-
-
+var ts1 = process.hrtime();
 
 
 // Use connect method to connect to the Server
@@ -65,9 +58,17 @@ MongoClient.connect(url, function(err, db) {
   });
   lr.on('end', function (line){
     //closeDB(db)
+
+          // Time reporting - callback
+          var ts2 = process.hrtime(ts1);
+          console.log('\n Total Time: %j s %j ms', ts2[0], (ts2[1] / 1000000) );
     }
   )
 });
+
+
+
+
 /*##################################################################
 
 # Define functions
