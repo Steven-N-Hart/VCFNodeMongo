@@ -84,13 +84,13 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
 
 //Process line
 var processLines = function (line, db) {
-    var myVar = VariantRecord.parseVCFline(line);
-    console.log(myVar);
+    var myVar = VariantRecord.parseVCFline(line, Header);
+    console.log("myVar",myVar);
 
-    var res = parseInputLine(line);
-    if (res !== undefined) {    ///this is problem
-        prepFormat(res, db);
-    }
+    //var res = parseInputLine(line);
+    //if (res !== undefined) {    ///this is problem
+    //    prepFormat(res, db);
+    //}
 };
 
 
