@@ -15,7 +15,13 @@ Goals:
 
 
 Notes:
-    BTW, that GYP package is a pain.  I had to hard-code fix a line to get it to work.
+
+Should the variant record also contain the build it's derived from? mm10,hg19,hg38
 
 A good read for node.js CLI dev:
 http://techblog.chegg.com/2013/10/14/nodejs_for_commandline_developers/
+
+
+Avoid Mongoose:
+http://codeandcodes.com/tag/mongoose-vs-mongodb-native/
+ It turns out that the overhead that mongoose adds for wrapping mongoDB documents within mongoose’s ORM is tremendous. Well, I should say tremendous for our use case.
