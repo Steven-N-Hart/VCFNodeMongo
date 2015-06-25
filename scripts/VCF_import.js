@@ -7,7 +7,7 @@ var MongoClient = require('mongodb').MongoClient;
 var LineByLineReader = require('line-by-line');
 var assert = require('assert');
 var config = require('./config.json');
-var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
+var VariantRecord = require('./VariantRecord.js');
 
 /*
  * Setup Commandline options, auto generates help
@@ -41,11 +41,10 @@ var study_id = CmdLineOpts.studyname;
 var Header = [];
 var sampleNames = [];
 
-
 // Use connect method to connect to the Server
+var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
 MongoClient.connect(url, function (err, db) {
     assert.equal(null, err);
-
     readMyFileLineByLine(db, CmdLineOpts.input, function () {
         // Time reporting - callback
         var ts2 = process.hrtime(ts1);
@@ -68,14 +67,26 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
         callback();
     }).on('line', function (line) {
         // 'line' contains the current line without the trailing newline character.
-        processLines(line, db);
-        console.log("Line ---- "+line);
+        // skip lines here to avoid unnecessary callbacks
+        if (!line.match(/^##/)) {
+            if (line.match(/^#CHROM/)) {
+                //Get sample index positions
+                Header = line.split('\t');
+                //sampleNames = Header.slice(9,Header.length); // no need for a loop.
+            } else {
+                processLines(line, db);
+                console.log("Line ---- " + line);
+            }
+        }
     });
 }
 
 
 //Process line
 var processLines = function (line, db) {
+    var myVar = VariantRecord.parseVCFline(line);
+    console.log(myVar);
+
     var res = parseInputLine(line);
     if (res !== undefined) {    ///this is problem
         prepFormat(res, db);
@@ -197,17 +208,7 @@ function prepFormat(res, db) {
 
 
 function parseInputLine(line) {
-    if (line.match(/^##/)) {
-    }
-    else if (line.match(/#CHROM/)) {
-        //Get sample index positions
-        Header = line.split('\t');
-        for (var i = 9; i < Header.length; i++) {
-            sampleNames[sampleNames.length] = Header[i];
-        }
-    }
-    else {
-        var Variant = {};
+    var Variant = {};
         var Row = line.split('\t');
         var FORMAT = Row[8].split(':');
         var pos = Row[1];
@@ -238,9 +239,9 @@ function parseInputLine(line) {
                 }
             } // End All Samples
             //Insert my array into the complete object
+            console.log(lineArray);
             return lineArray;
         }
-    } //end else
 }//end function
 
 function getValue(variable) {
