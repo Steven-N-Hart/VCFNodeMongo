@@ -33,7 +33,7 @@ This script extracts the VCF from the samples in the study name.  It can be eith
 		Seems to be working, but I have a hacky process.exit in there that I don't quite like
 
 
-#### 3. Importing Samples/Kits
+#### 3. Importing Samples
 ```Usage: node scripts/Meta_import.js examples/SampleMeta.txt ```
 
 This script takes a TSV file containing sample information and loads it into the DB.
@@ -43,3 +43,5 @@ Anything else is optional (e.g. case or control, substudy, etc)
 * Known issues:
 		Doesn't automatically close when finished
 		The SYNC isnt coded correctly.  It just loads the last line of metadata multiple times
+
+#### 4. Importing Kits
