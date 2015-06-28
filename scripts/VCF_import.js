@@ -75,7 +75,7 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
                 //sampleNames = Header.slice(9,Header.length); // no need for a loop.
             } else {
                 processLines(line, db);
-                console.log("Line ---- " + line);
+                //console.log("Line ---- " + line);
             }
         }
     });
@@ -85,13 +85,43 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
 //Process line
 var processLines = function (line, db) {
     var myVar = VariantRecord.parseVCFline(line, Header);
-    console.log("myVar",myVar);
+    //console.log("myVar",myVar);
 
-    //var res = parseInputLine(line);
-    //if (res !== undefined) {    ///this is problem
-    //    prepFormat(res, db);
-    //}
+    findVariant(myVar, db, function() {
+       // updateDocument(db, function() {
+
+       // });
+    });
+
+
+   /* var res = parseInputLine(line);
+    if (res !== undefined) {    ///this is problem
+        prepFormat(res, db);
+    }*/
 };
+
+
+
+
+
+
+var findVariant = function(varObj, db, callback) {
+    // Get the documents collection
+    var collection = db.collection('variants');
+    // Find some documents
+    collection.find(varObj.variant).toArray(function(err, docs) {
+        assert.equal(err, null);
+        //assert.equal(2, docs.length);
+        console.log("Found the following records");
+        console.dir(docs);
+        callback(docs);
+    });
+}
+
+
+
+
+
 
 
 //Async Code
