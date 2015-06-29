@@ -14,7 +14,7 @@ var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db
  */
 CmdLineOpts
     .version('0.0.1')
-    .usage('[options] -i <file>')
+    .usage('[options] -i <file> -n studyname')
     .option('-i, --input [file]', 'VCF file to be processed')
     .option('-n, --studyname [text]', 'Study Name, for importing')
     .parse(process.argv);
@@ -24,13 +24,13 @@ var ts1 = process.hrtime();
 
 //Make sure are variables are set
 if (!CmdLineOpts.input) {
-    console.log("Missing Input VCF file.");
+    console.log("\nMissing Input VCF file.");
     CmdLineOpts.outputHelp();
     process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
 }
 
 if (!CmdLineOpts.studyname) {
-    console.log("Missing Study Name.");
+    console.log("\nMissing Study Name.");
     CmdLineOpts.outputHelp();
     process.exit(27);
 }
@@ -50,7 +50,8 @@ MongoClient.connect(url, function (err, db) {
         // Time reporting - callback
         var ts2 = process.hrtime(ts1);
         console.log('\n Total Time: %j s %j ms', ts2[0], (ts2[1] / 1000000));
-        db.close();
+       //db.close();
+        setTimeout(function(){db.close()}, 2000);
     });
 });
 
@@ -69,7 +70,7 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
     }).on('line', function (line) {
         // 'line' contains the current line without the trailing newline character.
         processLines(line, db);
-        console.log("Line ---- "+line);
+        //console.log("Line ---- "+line);
     });
 }
 
@@ -93,7 +94,7 @@ var findDocument = function (OBJ, setQuery1, setQuery2, db) {
         {"chr": OBJ.chr, "pos": OBJ.pos, "ref": OBJ.ref, "alt": OBJ.alt},
         function (err, result) {
             assert.equal(err, null);
-            console.log("result = " + JSON.stringify(result) + " typeof " + typeof result);
+            //console.log("result = " + JSON.stringify(result) + " typeof " + typeof result);
             if (result === null) {
                 //console.log('Need to insert new record');
                 OBJ.needsAnnotation = true;
@@ -140,7 +141,7 @@ var findDocument = function (OBJ, setQuery1, setQuery2, db) {
                     }
                 }//End j
             }//End else
-            //db.close();
+            //db.close()
         }
     )
 };
@@ -169,10 +170,12 @@ function prepFormat(res, db) {
             delete res[j].study_id;
             delete res[j].sample;
             delete res[j]._id;
-            var setQuery1 = {};
-            var setQuery2 = {};
+            //Get genotype count (GTC)
+            var GTC = getGTC(res[j]['GT'])
+
+            var setQuery1 = {'samples.$.GTC':GTC};
+            var setQuery2 = {'GTC':GTC};
             for (var key in res[j]) {
-                //console.log('key='+key)
                 var attrName1 = key;
                 var attrName2 = key;
                 var attrValue1 = res[j][key];
@@ -180,9 +183,9 @@ function prepFormat(res, db) {
                 attrName1 = 'samples.$.' + attrName1;
                 setQuery1[attrName1] = attrValue1;
                 attrName2 = attrName2;
-
                 setQuery2[attrName2] = attrValue2;
             }
+            //Add in GenotTypeCount
             setQuery2['study_id'] = String(STUDY);
             setQuery2['sample'] = String(SAMPLE);
             //console.log('Q1: '+JSON.stringify(setQuery1));
@@ -242,6 +245,16 @@ function parseInputLine(line) {
         }
     } //end else
 }//end function
+
+
+//Get number of alt genotypes
+function getGTC(GT) {
+    GT=JSON.stringify(GT)
+    GT=GT.replace(/[\/\|\.0\"]/gi, '')
+    return GT.length
+}
+
+
 
 function getValue(variable) {
     // for each value, convert to a number if it is one.

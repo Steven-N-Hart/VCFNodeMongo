@@ -21,8 +21,6 @@ Scripts I have right now:
 
 This script takes a VCF and imports it into the mongodb database
 
-* Known issues:
-		Doesn't automatically close when finished
 
 #### 2. Exporting Variants
 ```Usage: node scripts/VCF_export.js -S [study names] [outname] ```
