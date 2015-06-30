@@ -2,54 +2,51 @@
 /*jshint -W069 */
 'use strict';
 
-// Connection URL
-var url = 'mongodb://localhost:27017/dev';
-//async = require("async");
+var CmdLineOpts = require('commander');
+var MongoClient = require('mongodb').MongoClient;
+var LineByLineReader = require('line-by-line');
+var assert = require('assert');
+var config = require('./config.json');
+var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
 
-var MongoClient = require('mongodb').MongoClient , assert = require('assert');
-var mongoServer = require('mongodb').Server;
-var serverOptions = {
-    'auto_reconnect': true,
-    'poolSize': 5
-};
+/*
+ * Setup Commandline options, auto generates help
+ */
+CmdLineOpts
+    .version('0.0.1')
+    .usage('[options] -n studyname -o outname')
+    .option('-o, --output [text]', 'Name of output file')
+    .option('-n, --studyname [text]', 'Study Name, for importing')
+    .parse(process.argv);
 
-var mod_getopt = require('posix-getopt');
-var parser, option, output, studyID;
+var ts1 = process.hrtime();
 
-parser = new mod_getopt.BasicParser(':S:(studyID)o:(output)', process.argv);
 
-while ((option = parser.getopt()) !== undefined) {
-    switch (option.option) {
-    case 'S':
-        studyID = option.optarg;        
-        break;
-    case 'o':
-        output = option.optarg;
-        break;
-    default:
-        /* error message already emitted by getopt */
-        mod_getopt.equal('?', option.option);
-        break;
-    }
-}
-
-if (output == null || studyID == null){
-    console.log('missing required argument: "output"');
-    console.log('\nUsage: node VCF_Export [options] <outname.vcf> ');
-    console.log('\t-S, studyID [multiple are comma seperated]');
+//Make sure are variables are set
+if (!CmdLineOpts.output) {
+    console.log('\nMissing output VCF file name');
+    console.log('\tmultiple studynames are comma seperated');
     console.log('\nBy default, all samples in all studies are output\n');
-    process.exit();
+    CmdLineOpts.outputHelp();
+    process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
 }
 
+if (!CmdLineOpts.studyname) {
+    console.log("\nMissing Study Name.");
+
+    CmdLineOpts.outputHelp();
+    process.exit(27);
+}
 //open the outfile
 var fs = require('fs');
-var stream = fs.createWriteStream(output);
+var stream = fs.createWriteStream(CmdLineOpts.output);
 
 
 // Split each study id and sample id and put quotes around them
-var  studyIDs=studyID.split(',');
+var studyID = CmdLineOpts.studyname;
+var studyIDs=studyID.split(',');
 
-//console.log('studyID='+ studyIDs.length+' '+studyIDs)
+//console.log('studyID='+ studyIDs.length)
 //process.exit();
 
 //Step0.  Print header
@@ -66,7 +63,8 @@ getHeader(studyIDs);
 // Build functions
 function getHeader(studyIDs){
     printHeader();
-    getSamples(studyIDs)
+    getSamples(studyIDs,printHeaderLine(db,SAMPLES,printVariants(SAMPLES,db))
+)
   };
 
 
@@ -78,17 +76,17 @@ function getSamples(studyIDs,cb){
     assert.equal(null, err);
     //console.log('Connected')
     var collection = db.collection('meta');
-       collection.find({'studyID' : {$in: studyIDs}},{'_id':0,'sample_id':1}).toArray(
+       collection.find({'study_id' : {$in: studyIDs}},{'_id':0,'sample_id':1}).toArray(
             function(err, documents) {
               if (err){console.log('ERR='+err)}
-                //console.log('docs='+JSON.stringify(documents));
+               // console.log('docs='+JSON.stringify(documents));
               for (var j=0; j<documents.length;j++){
               //console.log('j='+documents[j].sample_id);
               SAMPLES.push(documents[j].sample_id);
             }
             //console.log('ARRAY='+SAMPLES);
             //db.close();
-            printHeaderLine(db,SAMPLES,printVariants(SAMPLES,db))
+            cb()
             }
         );
   });
@@ -111,10 +109,11 @@ function printHeaderLine(db,SAMPLES,callback) {
 function printVariants(SAMPLES,db){
   //console.log('COUNT='+COUNT);COUNT=COUNT+1;
 	var collection = db.collection('variants');
-	//console.log('studies = '+studies);
+ //console.log('studyIDs = '+studyIDs);
+    //console.log('samples = '+SAMPLES);
   	var cursor = collection.aggregate([
       {$match : {
-        'samples.sample':{
+        'samples.sample_id':{
             $in:SAMPLES
           }
       }},
@@ -123,7 +122,7 @@ function printVariants(SAMPLES,db){
       },
       {
         $match:{
-          'samples.sample':{
+          'samples.sample_id':{
               $in:SAMPLES
           }
         }
@@ -134,11 +133,12 @@ function printVariants(SAMPLES,db){
         }
       }
       ]);
+    console.log('Starting EACH');
   	cursor.each(function(err,res){
-      if(err){console.log('err = ' + err)}
+      if(err || res == null){console.log('err = ' + err);}
 		  var variants = res;
-  		if(res !== null){
-     		//variants= JSON.parse(variants);
+      //console.log('EACH results= '+JSON.stringify(variants));
+  		if(res != null){
      		var chrom = variants._id.chr;
      		var pos = variants._id.pos;
      		var ref = variants._id.ref;
@@ -149,28 +149,30 @@ function printVariants(SAMPLES,db){
      		var studyAC=0;
      		//Get number of samples in study
      		var len = SAMPLES.length;
+        //console.log('ARRAY='+JSON.stringify(ARRAY))
 
      		//loop over each sample and get results
      		for (var whichSample=0;whichSample < len ;whichSample++){
      			var SAMPLE = SAMPLES[whichSample];
-          //console.log('ARRAY='+JSON.stringify(ARRAY))
 
-          var a = ARRAY.map(function(e) { return e.sample }).indexOf(SAMPLE);
+          var a = ARRAY.map(function(e) { return e.sample_id }).indexOf(SAMPLE);
+          //console.log('Looking for '+SAMPLE+' in '+ARRAY);
+          //console.log('found: '+a);
+
      			//if a < 0, then the sample does not have data
      			if (a < 0){
-     				//console.log('This is not in query');
-            var sampleObj = new sampleData(SAMPLE,'.','.', '.', '.', '.','.')
+            var sampleObj = new sampleData(SAMPLE,'.','.', '.', '.', '.','.','.')
      				//break
      			}
           else{
-            var sampleObj = new sampleData(ARRAY[a].sample,ARRAY[a].GT, ARRAY[a].GQ, ARRAY[a].HQ, ARRAY[a].PL, ARRAY[a].AD, ARRAY[a].DP)
+            var sampleObj = new sampleData(ARRAY[a].sample_id,ARRAY[a].GT, ARRAY[a].GQ, ARRAY[a].HQ, ARRAY[a].PL, ARRAY[a].AD, ARRAY[a].DP, ARRAY[a].GTC)
           }
      	  //console.log('OBJ='+JSON.stringify(sampleObj))
         //process.exit();
       		//Calcuacate AC and AN
      			if (sampleObj.GT === undefined || sampleObj.GT == './.'|| sampleObj.GT == '.' ){
   	   			sampleObj.GT='.';
-  	   			studyAN++;studyAN++;
+  	   			
   	   		}
   	   	   	//Add 1 for heterozygous
   	   		if (sampleObj.GT == '0/1' || sampleObj.GT == '0|1'||sampleObj.GT == '1/0' || sampleObj.GT == '1|0' ||sampleObj.GT == './1' ){
@@ -182,9 +184,9 @@ function printVariants(SAMPLES,db){
   	   			studyAC++;
   	   			studyAC++;studyAN++;studyAN++;
   	   		}
-  	   		var formatData = sampleObj.GT+':'+sampleObj.AD+':'+sampleObj.DP+':'+sampleObj.GQ+':'+sampleObj.HQ;
+  	   		var formatData = sampleObj.GT+':'+sampleObj.AD+':'+sampleObj.DP+':'+sampleObj.GQ+':'+sampleObj.HQ+':'+sampleObj.GTC;
           //console.log(JSON.stringify(formatData))
-  	   		FORMAT_FIELDS[sampleObj.sample] = formatData ;
+  	   		FORMAT_FIELDS[sampleObj.sample_id] = formatData ;
         //console.log('JSON='+JSON.stringify(FORMAT_FIELDS))
   	   	}//All samples have been evaluated
 
@@ -201,16 +203,18 @@ function printVariants(SAMPLES,db){
         //console.log('FORMAT_FIELDS='+FORMAT_FIELDS)
         //console.log('INFO_LINE='+INFO_LINE)
 
-     		FULL_LINE.push(chrom,pos,'.', ref,alt,'.','.',INFO_LINE,'GT:AD:DP:GQ:HQ',FORMAT_FIELDS);
+     		FULL_LINE.push(chrom,pos,'.', ref,alt,'.','.',INFO_LINE,'GT:AD:DP:GQ:HQ:GTC',FORMAT_FIELDS);
      		var fullLine = FULL_LINE.join('\t');
      		stream.write(fullLine+'\n');
-        console.log(fullLine)
+        //console.log(fullLine)
      	}//End if res is not null
       else {
-        process.exit()
+        setTimeout(function(){db.close();}, 10); // I really don't think this is correct
       }
-   }//End Each
+     
+ }//End Each
   );
+       setTimeout(function(){db.close()}, 1);// I really don't think this is correct
 }
 
 function printHeader(){
@@ -222,19 +226,21 @@ function printHeader(){
 	stream.write('##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n');
 	stream.write('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">\n');
 	stream.write('##FORMAT=<ID=AD,Number=2,Type=Integer,Description="Number of reference and supporting alleles">\n');
-	stream.write('##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">\n');
+  stream.write('##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">\n');
+  stream.write('##FORMAT=<ID=GTC,Number=1,Type=Integer,Description="Number of alternate alleles in sample">\n');
 }
 
 
 
- function sampleData(sample, GT, GQ, HQ, PL, AD, DP) {
+ function sampleData(sample, GT, GQ, HQ, PL, AD, DP, GTC) {
     this.GT = isDefined(GT);
     this.GQ = isDefined(GQ);
     this.HQ = isDefined(HQ);
     this.PL = isDefined(PL);
     this.AD = isDefined(AD);
     this.DP = isDefined(DP);
-    this.sample = sample;
+    this.GTC = isDefined(GTC);
+    this.sample_id = sample;
 }
 
 function isDefined(query){

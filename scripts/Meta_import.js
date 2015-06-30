@@ -53,9 +53,9 @@ headerLine = lines[0].split('\t');
 
 
 //check the file for required fields
-var sampleIndex = headerLine.indexOf('sample');
-var studyIndex = headerLine.indexOf('study');
-var kitIndex = headerLine.indexOf('kit');
+var sampleIndex = headerLine.indexOf('sample_id');
+var studyIndex = headerLine.indexOf('study_id');
+var kitIndex = headerLine.indexOf('kit_id');
 
 if (sampleIndex < 0 || studyIndex < 0 || kitIndex < 0){
 	console.log('you are missing a required value in your meta file');
@@ -89,9 +89,9 @@ MongoClient.connect(url, function(err, db) {
    		for (var a=0; a<newline.length;a++){
    			insertString[headerLine[a]]=newline[a];
    		}
-   		queryString['sample']=newline[sampleIndex];
-   		queryString['study']=newline[studyIndex];
-   		queryString['kit']=newline[kitIndex];
+   		queryString['sample_id']=newline[sampleIndex];
+   		queryString['study_id']=newline[studyIndex];
+   		queryString['kit_id']=newline[kitIndex];
 		var collection = db.collection('meta');
    		collection.update(
    			queryString,
@@ -105,16 +105,15 @@ MongoClient.connect(url, function(err, db) {
    		);
     	}//end for i loop
     //db.close();
-    setTimeout(function(){db.close()}, 1000);
+    setTimeout(function(){db.close()}, 2000);
 });
 
 function validateKit(db, kit ){
-    var collection = db.collection('kit');
-    collection.findOne({'kit' : kit}, function (err,res){
+    var collection = db.collection('kit_id');
+    collection.findOne({'kit_id' : kit}, function (err,res){
         if(err || res === null){
             console.log('Error:'+err+' and res = '+res);
-            console.log('cannot find KIT: '+ newline[kitIndex])
-            process.exit(1);
+            process.exit(27);
         }
         else {
             return true;
