@@ -84,13 +84,14 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
 
 //Process line
 var processLines = function (line, db) {
-    var myVar = VariantRecord.parseVCFline(line, Header);
-    //console.log("myVar",myVar);
+    VariantRecord.parseVCFline(line, Header, function(myVar){
+        // file line is parsed into an object, now do database work
+        //console.log("myVar",myVar);
+        findVariant(myVar, db, function(ret) {
+            updateVariant(db, ret, function() {
 
-    findVariant(myVar, db, function() {
-       // updateDocument(db, function() {
-
-       // });
+            });
+        });
     });
 
 
@@ -106,19 +107,18 @@ var processLines = function (line, db) {
 
 
 var findVariant = function(varObj, db, callback) {
-    // Get the documents collection
     var collection = db.collection('variants');
-    // Find some documents
-    collection.find(varObj.variant).toArray(function(err, docs) {
+    // Find this variant
+    collection.findOne(varObj.variant, function(err, found) {
         assert.equal(err, null);
-        //assert.equal(2, docs.length);
-        console.log("Found the following records");
-        console.dir(docs);
-        callback(docs);
+        callback(found);
     });
-}
+};
 
 
+var updateVariant = function(db, callback){
+  //console.log("inside update",varQ);
+};
 
 
 
