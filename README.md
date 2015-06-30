@@ -40,8 +40,7 @@ This script takes a TSV file containing sample information and loads it into the
 The TSV requires 3 fields: sample, study, and kit.
 Anything else is optional (e.g. case or control, substudy, etc)
 
-* Known issues:
-		Doesn't automatically close when finished
-		The SYNC isnt coded correctly.  It just loads the last line of metadata multiple times
+#### 4. Exporting variants that need to be annotated
+```Usage: node scripts/VCF_annotationExport.js -o outname ```
 
-#### 4. Importing Kits
+This script gets all variants from the DB that need annotation 

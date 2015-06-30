@@ -14,7 +14,7 @@ var VariantRecord = require('./VariantRecord.js');
  */
 CmdLineOpts
     .version('0.0.1')
-    .usage('[options] -i <file>')
+    .usage('[options] -i <file> -n studyname')
     .option('-i, --input [file]', 'VCF file to be processed')
     .option('-n, --studyname [text]', 'Study Name, for importing')
     .parse(process.argv);
@@ -24,22 +24,22 @@ var ts1 = process.hrtime();
 
 //Make sure are variables are set
 if (!CmdLineOpts.input) {
-    console.log("Missing Input VCF file.");
+    console.log("\nMissing Input VCF file.");
     CmdLineOpts.outputHelp();
     process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
 }
 
 if (!CmdLineOpts.studyname) {
-    console.log("Missing Study Name.");
+    console.log("\nMissing Study Name.");
     CmdLineOpts.outputHelp();
     process.exit(27);
 }
 
 //Get study ID
 var study_id = CmdLineOpts.studyname;
-//Call the main DB to make sure it exists and get its uniq id and get its KitID
 var Header = [];
 var sampleNames = [];
+
 
 // Use connect method to connect to the Server
 var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
@@ -157,7 +157,7 @@ var findDocument = function (OBJ, setQuery1, setQuery2, db) {
                                     "pos": OBJ.pos,
                                     "ref": OBJ.ref,
                                     "alt": OBJ.alt,
-                                    "samples.sample": OBJ.samples[j].sample,
+                                    "samples.sample_id": OBJ.samples[j].sample_id,
                                     "samples.study_id": OBJ.samples[j].study_id
                                 },
                                 {"$set": setQuery2},
@@ -203,17 +203,19 @@ function prepFormat(res, db) {
             line['pos'] = Number(_id.pos);
             line['ref'] = _id.ref;
             line['alt'] = _id.alt;
-            var SAMPLE = res[j]['sample'];
+            var SAMPLE = res[j]['sample_id'];
             var STUDY = res[j]['study_id'];
 
             // Now create set string for remaining variables
             delete res[j].study_id;
-            delete res[j].sample;
+            delete res[j].sample_id;
             delete res[j]._id;
-            var setQuery1 = {};
-            var setQuery2 = {};
+            //Get genotype count (GTC)
+            var GTC = getGTC(res[j]['GT'])
+
+            var setQuery1 = {'samples.$.GTC':GTC};
+            var setQuery2 = {'GTC':GTC};
             for (var key in res[j]) {
-                //console.log('key='+key)
                 var attrName1 = key;
                 var attrName2 = key;
                 var attrValue1 = res[j][key];
@@ -221,11 +223,11 @@ function prepFormat(res, db) {
                 attrName1 = 'samples.$.' + attrName1;
                 setQuery1[attrName1] = attrValue1;
                 attrName2 = attrName2;
-
                 setQuery2[attrName2] = attrValue2;
             }
+            //Add in GenotTypeCount
             setQuery2['study_id'] = String(STUDY);
-            setQuery2['sample'] = String(SAMPLE);
+            setQuery2['sample_id'] = String(SAMPLE);
             //console.log('Q1: '+JSON.stringify(setQuery1));
             //console.log('Q2: '+JSON.stringify(setQuery2));
             PIECE2.push(setQuery2);
@@ -252,7 +254,7 @@ function parseInputLine(line) {
             for (var k = 9; k < Row.length; k++) {
                 var sample_id = Header[k];
                 var formatdata = {study_id: study_id, _id: _id};
-                formatdata['sample'] = sample_id;
+                formatdata['sample_id'] = sample_id;
                 //formatdata.sample = sample_id;
                 if (!Row[k].match(/\.\/\./)) {
                     for (var j = 0; j < FORMAT.length; j++) {
@@ -273,6 +275,16 @@ function parseInputLine(line) {
             return lineArray;
         }
 }//end function
+
+
+//Get number of alt genotypes
+function getGTC(GT) {
+    GT=JSON.stringify(GT)
+    GT=GT.replace(/[\/\|\.0\"]/gi, '')
+    return GT.length
+}
+
+
 
 function getValue(variable) {
     // for each value, convert to a number if it is one.
