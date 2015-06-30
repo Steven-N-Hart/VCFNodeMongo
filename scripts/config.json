@@ -4,6 +4,11 @@
     "host" : "localhost",
     "port" : "27017",
     "name" : "mydb_dev"
+  },
+  "names" : {
+    "variant" : "variants",
+    "sample" : "meta",
+    "kit" : "kit_id"
   }
 
 }

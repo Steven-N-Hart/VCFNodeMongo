@@ -86,9 +86,8 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
 var processLines = function (line, db) {
     VariantRecord.parseVCFline(line, Header, function(myVar){
         // file line is parsed into an object, now do database work
-        //console.log("myVar",myVar);
         findVariant(myVar, db, function(ret) {
-            updateVariant(db, ret, function() {
+            updateVariant(ret, db, function() {
 
             });
         });
@@ -107,7 +106,7 @@ var processLines = function (line, db) {
 
 
 var findVariant = function(varObj, db, callback) {
-    var collection = db.collection('variants');
+    var collection = db.collection(config.names.variant);
     // Find this variant
     collection.findOne(varObj.variant, function(err, found) {
         assert.equal(err, null);
