@@ -96,9 +96,15 @@ var findSamples = function(db, callback){
     console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
 
     collection.find( {"study_id" : study_id, "sample_id" : { $in : sampleNames } } ).toArray(function (err, result) {
-        assert.equal(err, [], "No Sample(s) in this study. Need to register all samples to '" + study_id + "' first."); // returns empty, if study wrong, or no samples exist
-
+        assert.equal(err, null, "Sample Check Issue");
+        // returns empty, if study wrong, or no samples exist
+        if (result === []) {
+            console.error("No Sample(s) in this study. Need to register all samples to '" + study_id + "' first.");
+            process.exit;
+        }
         console.log(result);
+
+
 
 
         callback(result);
