@@ -59,7 +59,7 @@ var getFormats  = function (strArr) {
 
 
 module.exports = {
-    parseVCFline : function(vcfLine, vcfTitle, callback){
+    parseVCFline : function(vcfLine, callback){
         var row = vcfLine.split('\t');
         if (row[4].match(',')) {
             console.error(vcfLine);
@@ -73,7 +73,7 @@ module.exports = {
                 alt : row[4]
                 // will have samples : [{GT:"",sampleObjId:"",HQ:"",...}] where sample is already uploaded...refuse non-existant samples
             },
-            sampleNames : vcfTitle.slice(9,vcfTitle.length),
+            //sampleNames : vcfTitle.slice(9,vcfTitle.length),
             sampleFormats : getFormats(row)
         };
         callback( wholeRecord );

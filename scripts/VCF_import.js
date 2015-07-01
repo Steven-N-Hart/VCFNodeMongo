@@ -6,7 +6,6 @@ var CmdLineOpts = require('commander');
 var MongoClient = require('mongodb').MongoClient;
 var LineByLineReader = require('line-by-line');
 var assert = require('assert');
-//var Q = require('q');
 var config = require('./config.json');
 var VariantRecord = require('./VariantRecord.js');
 //var logger = require('./winstonLog');
@@ -38,9 +37,8 @@ if (!CmdLineOpts.studyname) {
 
 //Get study ID
 var study_id = CmdLineOpts.studyname;
-var Header = [];
+var Header = []; ///depricate this
 var sampleDbIds = [];
-
 
 
 // Use connect method to connect to the Server
@@ -73,17 +71,13 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
         // skip lines here to avoid unnecessary callbacks
         if (!line.match(/^##/)) {
             if (line.match(/^#CHROM/)) {
-                //Get sample index positions
-                Header = line.split('\t');
-                findSamples(db, function(ret) {
+                //Get sample index positions, must pause, need to have these processed before reading on.
+                findSamples(db, line, function (ret) {
                     sampleDbIds = ret;
-                   // console.log(ret);
                     lr.resume();
                 });
                 lr.pause();
             } else {
-                // NEED TO BLOCK UNTIL SAMPLES HAVE BEEN RESOLVED!!! - don't want async for #chom line...
-
                 processLines(line, db);
                // console.log("Line ---- " + line);
             }
@@ -92,48 +86,12 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
 };
 
 
-
-
-/*
-
 // One database transaction for getting samples back...if all aren't already registered...accept none!
-function findSamples (db) {
-   // return Q.Promise(function (resolve, reject, notify) {
-    var deferred = Q.defer();
-       console.log("inside");
-
-    var sampleNames = Header.slice(9, Header.length); // no need for a loop.
+var findSamples = function (db, ln, callback) {
+    var chromLine = ln.split('\t');
+    var sampleNames = chromLine.slice(9, chromLine.length); // no need for a loop.
     var collection = db.collection(config.names.sample);
-
-    console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
-
-    collection.find( {"study_id" : study_id, "sample_id" : { $in : sampleNames } } ).toArray(function (err, result) {
-        assert.equal(err, null, "Sample Check Issue");
-        // returns empty, if study wrong, or no samples exist
-        if (result === []) {
-            console.error("No Sample(s) in this study. Need to register all samples to '" + study_id + "' first.");
-           // process.exit;
-        }
-        //console.log(result);
-        deferred.resolve(result);
-
-//        notify(result);
-
-    }
-
-        // callback(result);
-   // )
-};
-*/
-
-
-
-// One database transaction for getting samples back...if all aren't already registered...accept none!
-var findSamples = function (db, callback) {
-    var sampleNames = Header.slice(9, Header.length); // no need for a loop.
-    var collection = db.collection(config.names.sample);
-
-    console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
+   // console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
 
     collection.find( {"study_id" : study_id, "sample_id" : { $in : sampleNames } } ).toArray(function (err, result) {
         assert.equal(err, null, "Sample Check Issue");
@@ -147,32 +105,32 @@ var findSamples = function (db, callback) {
             process.exit(5);
         }
 
-        var justSampleids = [];
+        var orderedSampleids = [];
         outerloop:
         for (var i in sampleNames){
             for (var n in result) {
                 if( sampleNames[i] === result[n].sample_id ){
-                    justSampleids[i] = result[n]._id;
-                    continue outerloop;
+                    orderedSampleids[i] = result[n]._id;
+                    continue outerloop;  // small loop efficiency
                 }
             }
         }
-
-        callback(justSampleids);
+        callback(orderedSampleids);
     });
 };
 
 
 //Process line
 var processLines = function (line, db) {
-    VariantRecord.parseVCFline(line, Header, function(myVar){
+    VariantRecord.parseVCFline(line, function(myVar){
         // file line is parsed into an object, now do database work
         findVariant(myVar, db, function(ret) {
-               // console.log("find samps", myVar);
-               /* updateVariant(myVar, ret, samps, db, function() {
+            console.log("\n\n");
+            console.log("ret",ret);
+          //     updateVariant(myVar, ret, db, function() {
 
-                });*/
-            //});
+                ///});*/
+          //  });
         });
     });
 
@@ -185,23 +143,37 @@ var processLines = function (line, db) {
 
 
 
-
-
-
 var findVariant = function(varObj, db, callback) {
     var collection = db.collection(config.names.variant);
     // Find this variant
     collection.findOne(varObj.variant, function(err, found) {
-       // assert.equal(err, null);
+       if(found === null){
+           collection.save(varObj.variant, function(err, doc){
+               assert.equal(err, null);
+               callback(doc);
+           });
+       }
+       else{
+           callback(found);
+       }
+
+
+    });
+    /*
+    collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
+        console.log("found",found);
+        console.log("err",err);
         callback(found);
     });
+      */
+
 };
 
 
 
 
 
-var updateVariant = function(varObj, retVariant, retSamples, db, callback){
+var updateVariant = function(varObj, retVariant, db, callback){
     var collection = db.collection(config.names.variant);
 
     if (retVariant === null) {
