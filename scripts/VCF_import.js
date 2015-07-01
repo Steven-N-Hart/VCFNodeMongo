@@ -58,14 +58,16 @@ MongoClient.connect(url, function (err, db) {
 /*###############################################################
  # Define functions
  ################################################################*/
-
 var readMyFileLineByLine  = function (db, filepath, callback) {
+    var lineNum = 1;
+    var totalLines = 29; ///exec("wc -l " + filepath);
+   // console.log(lineNum,totalLines);
     var lr = new LineByLineReader(filepath);
     lr.on('error', function (err) {
         console.error(err);
     }).on('end', function () {
         console.log("Line reading finished");
-        callback();
+        //callback(); this emits before db operations are done...cannot close here.
     }).on('line', function (line) {
         // 'line' contains the current line without the trailing newline character.
         // skip lines here to avoid unnecessary callbacks
@@ -74,14 +76,23 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
                 //Get sample index positions, must pause, need to have these processed before reading on.
                 findSamples(db, line, function (ret) {
                     sampleDbIds = ret;
+                    lineNum++;
                     lr.resume();
                 });
                 lr.pause();
             } else {
-                processLines(line, db);
+                processLines(line, db, function () {
+                    lineNum++;
+                    // sorta hacky....this is due to how  LineByLineReader emits events....may need to look at different file read strategy.
+                    console.log(["linenum",lineNum,"totallines",totalLines]);
+                    if (totalLines <= lineNum) {
+                        callback();
+                    }
+                });
                // console.log("Line ---- " + line);
             }
         }
+        else { lineNum++; }
     });
 };
 
@@ -93,7 +104,7 @@ var findSamples = function (db, ln, callback) {
     var collection = db.collection(config.names.sample);
    // console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
 
-    collection.find( {"study_id" : study_id, "sample_id" : { $in : sampleNames } } ).toArray(function (err, result) {
+    collection.find({"study_id" : study_id, "sample_id" : { $in : sampleNames } }).toArray(function (err, result) {
         assert.equal(err, null, "Sample Check Issue");
         // returns empty, if study wrong, or no samples exist
         if (result.length < 1) {
@@ -121,14 +132,14 @@ var findSamples = function (db, ln, callback) {
 
 
 //Process line
-var processLines = function (line, db) {
+var processLines = function (line, db, callback) {
     VariantRecord.parseVCFline(line, function(myVar){
         // file line is parsed into an object, now do database work
         findVariant(myVar, db, function(ret) {
             console.log("\n\n");
             console.log("ret",ret);
           //     updateVariant(myVar, ret, db, function() {
-
+                      callback();
                 ///});*/
           //  });
         });
@@ -146,29 +157,30 @@ var processLines = function (line, db) {
 var findVariant = function(varObj, db, callback) {
     var collection = db.collection(config.names.variant);
     // Find this variant
-    collection.findOne(varObj.variant, function(err, found) {
-       if(found === null){
-           collection.save(varObj.variant, function(err, doc){
-               assert.equal(err, null);
-               callback(doc);
-           });
-       }
-       else{
-           callback(found);
-       }
+   /* collection.findOne(varObj.variant, function(err, found) {
 
-
-    });
     /*
-    collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
-        console.log("found",found);
-        console.log("err",err);
-        callback(found);
+    if(found === null){
+    collection.save(varObj.variant, function(err, doc){
+    console.log("T3",process.hrtime());
+    assert.equal(err, null);
+    callback(doc);
     });
-      */
+    }
 
+        console.log("T2",process.hrtime());
+        callback(found);
+    });*/
+    collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
+        assert.equal(err, null);
+        if (found.lastErrorObject.updatedExisting){
+            callback(found.value);
+        }
+        else{
+            callback( {_id:found.lastErrorObject.upserted} );
+        }
+    });
 };
-
 
 
 
