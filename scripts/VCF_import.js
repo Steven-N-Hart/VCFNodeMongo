@@ -8,6 +8,8 @@ var LineByLineReader = require('line-by-line');
 var assert = require('assert');
 var config = require('./config.json');
 var VariantRecord = require('./VariantRecord.js');
+var logger = require('./winstonLog');
+
 
 /*
  * Setup Commandline options, auto generates help
@@ -87,7 +89,7 @@ var processLines = function (line, db) {
     VariantRecord.parseVCFline(line, Header, function(myVar){
         // file line is parsed into an object, now do database work
         findVariant(myVar, db, function(ret) {
-            updateVariant(ret, db, function() {
+            updateVariant(myVar, ret, db, function() {
 
             });
         });
@@ -115,8 +117,19 @@ var findVariant = function(varObj, db, callback) {
 };
 
 
-var updateVariant = function(db, callback){
-  //console.log("inside update",varQ);
+var updateVariant = function(varObj, retVariant, db, callback){
+    var collection = db.collection(config.names.variant);
+    if (retVariant === null) {
+        varObj.needsAnnotation = true;
+        collection.insert(varObj, function (err, result) {
+            assert.equal(err, null);
+            //console.log('Inserted '+ result);
+
+            ///   logger.info('log to file');
+
+        });
+    }
+
 };
 
 
