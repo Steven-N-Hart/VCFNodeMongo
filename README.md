@@ -35,7 +35,7 @@ This script extracts the VCF from the samples in the study name.  It can be eith
 ```Usage: node scripts/Meta_import.js examples/SampleMeta.txt ```
 
 This script takes a TSV file containing sample information and loads it into the DB.
-The TSV requires 3 fields: sample, study, and kit.
+The TSV requires 3 fields: sample_id, study_id, and kit_id.
 Anything else is optional (e.g. case or control, substudy, etc)
 
 #### 4. Exporting variants that need to be annotated

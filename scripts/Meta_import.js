@@ -13,7 +13,7 @@ var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db
 //Make sure are variables are set
 if(typeof process.argv[2] === 'undefined') {
   console.log('Usage: Meta_import.js -i <tsv_file>');
-  console.log('\nMust contain "study", "sample", and "kit" or else it will fail');
+  console.log('\nMust contain "study_id", "sample_id", and "kit_id" or else it will fail');
   console.log('\nAlso, the kit value needs to be registered before samples can be loaded');
   process.exit();
 }
