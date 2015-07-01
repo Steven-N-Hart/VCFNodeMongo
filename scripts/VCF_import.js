@@ -10,7 +10,6 @@ var config = require('./config.json');
 var VariantRecord = require('./VariantRecord.js');
 var logger = require('./winstonLog');
 
-
 /*
  * Setup Commandline options, auto generates help
  */
@@ -20,7 +19,6 @@ CmdLineOpts
     .option('-i, --input [file]', 'VCF file to be processed')
     .option('-n, --studyname [text]', 'Study Name, for importing')
     .parse(process.argv);
-
 var ts1 = process.hrtime();
 
 
@@ -40,7 +38,7 @@ if (!CmdLineOpts.studyname) {
 //Get study ID
 var study_id = CmdLineOpts.studyname;
 var Header = [];
-var sampleNames = [];
+//var sampleNames = [];
 
 
 // Use connect method to connect to the Server
@@ -89,8 +87,11 @@ var processLines = function (line, db) {
     VariantRecord.parseVCFline(line, Header, function(myVar){
         // file line is parsed into an object, now do database work
         findVariant(myVar, db, function(ret) {
-            updateVariant(myVar, ret, db, function() {
+            findSamples(myVar, db, function(samps) {
+               // updateVariant(myVar, ret, db, function() {
 
+
+               // });
             });
         });
     });
@@ -117,8 +118,22 @@ var findVariant = function(varObj, db, callback) {
 };
 
 
+var findSamples = function(varObj, db, callback){
+    var collection = db.collection(config.names.sample);
+
+    collection.find( {"study_id" : study_id, "sample_id" : { $in : varObj.sampleNames } } ).toArray(function (err, result) {
+        assert.equal(err, null);
+        callback(result);
+    });
+
+
+}
+
+
 var updateVariant = function(varObj, retVariant, db, callback){
     var collection = db.collection(config.names.variant);
+
+
     if (retVariant === null) {
         varObj.needsAnnotation = true;
         collection.insert(varObj, function (err, result) {
