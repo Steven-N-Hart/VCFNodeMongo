@@ -8,7 +8,7 @@ var LineByLineReader = require('line-by-line');
 var assert = require('assert');
 var config = require('./config.json');
 var VariantRecord = require('./VariantRecord.js');
-var logger = require('./winstonLog');
+//var logger = require('./winstonLog');
 
 /*
  * Setup Commandline options, auto generates help
@@ -38,7 +38,7 @@ if (!CmdLineOpts.studyname) {
 //Get study ID
 var study_id = CmdLineOpts.studyname;
 var Header = [];
-//var sampleNames = [];
+var sampleDbIds = [];
 
 
 // Use connect method to connect to the Server
@@ -72,27 +72,49 @@ var readMyFileLineByLine  = function(db, filepath, callback) {
             if (line.match(/^#CHROM/)) {
                 //Get sample index positions
                 Header = line.split('\t');
-                //sampleNames = Header.slice(9,Header.length); // no need for a loop.
+                findSamples(db, function(samps) {
+                    sampleDbIds = samps;
+                });
+
+                setTimeout(function(){console.log("Chom Line timmer block")}, 6000);// this is hack
+
             } else {
+                // NEED TO BLOCK UNTIL SAMPLES HAVE BEEN RESOLVED!!! - don't want async for #chom line...
+
                 processLines(line, db);
-                //console.log("Line ---- " + line);
+                console.log("Line ---- " + line);
             }
         }
     });
-}
+};
 
+// One database transaction for getting samples back...if all aren't already registered...accept none!
+var findSamples = function(db, callback){
+    var sampleNames = Header.slice(9,Header.length); // no need for a loop.
+    var collection = db.collection(config.names.sample);
+
+    console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
+
+    collection.find( {"study_id" : study_id, "sample_id" : { $in : sampleNames } } ).toArray(function (err, result) {
+        assert.equal(err, [], "No Sample(s) in this study. Need to register all samples to '" + study_id + "' first."); // returns empty, if study wrong, or no samples exist
+
+        console.log(result);
+
+
+        callback(result);
+    });
+};
 
 //Process line
 var processLines = function (line, db) {
     VariantRecord.parseVCFline(line, Header, function(myVar){
         // file line is parsed into an object, now do database work
         findVariant(myVar, db, function(ret) {
-            findSamples(myVar, db, function(samps) {
-               // updateVariant(myVar, ret, db, function() {
+               // console.log("find samps", myVar);
+               /* updateVariant(myVar, ret, samps, db, function() {
 
-
-               // });
-            });
+                });*/
+            //});
         });
     });
 
@@ -112,33 +134,24 @@ var findVariant = function(varObj, db, callback) {
     var collection = db.collection(config.names.variant);
     // Find this variant
     collection.findOne(varObj.variant, function(err, found) {
-        assert.equal(err, null);
+       // assert.equal(err, null);
         callback(found);
     });
 };
 
 
-var findSamples = function(varObj, db, callback){
-    var collection = db.collection(config.names.sample);
-
-    collection.find( {"study_id" : study_id, "sample_id" : { $in : varObj.sampleNames } } ).toArray(function (err, result) {
-        assert.equal(err, null);
-        callback(result);
-    });
 
 
-}
 
-
-var updateVariant = function(varObj, retVariant, db, callback){
+var updateVariant = function(varObj, retVariant, retSamples, db, callback){
     var collection = db.collection(config.names.variant);
 
-
     if (retVariant === null) {
-        varObj.needsAnnotation = true;
+        varObj.variant.needsAnnotation = true;
+
         collection.insert(varObj, function (err, result) {
             assert.equal(err, null);
-            //console.log('Inserted '+ result);
+            console.log('Inserted '+ result);
 
             ///   logger.info('log to file');
 
@@ -146,6 +159,9 @@ var updateVariant = function(varObj, retVariant, db, callback){
     }
 
 };
+
+
+
 
 
 
