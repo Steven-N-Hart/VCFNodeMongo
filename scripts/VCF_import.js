@@ -138,7 +138,7 @@ var processLines = function (line, db, callback) {
         // file line is parsed into an object, now do database work
         findVariant(myVar, db, function(ret) {
             updateVariant(myVar, ret, db, function() {
-                    //  callback();
+                callback();
             });
         });
     });
@@ -192,34 +192,14 @@ var updateVariant = function(varObj, retVariant, db, callback){
         varObj.sampleFormats[h]['sample_id'] = sampleDbIds[h];
         allSamples.push(varObj.sampleFormats[h]);
     }
-
-    console.log("arr", allSamples )
-
+    /// This makes one query, updates any changes & inserts anything new
     collection.update(retVariant,{ $pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
-        if (err){
-            console.error(err);
-        }
+        if (err){ console.error(err); }
         else{
-            console.log("succeded", data);
+            console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + "-" + varObj.variant.alt + "\tS=" + allSamples.length);
         }
         callback();
     });
-
-
-
-    // collection.update()
-   // { $pushAll: { events: events }}
-
-    //if (retVariant === null) {
-    //
-    //    collection.insert(varObj, function (err, result) {
-    //        assert.equal(err, null);
-    //        console.log('Inserted '+ result);
-    //
-    //
-    //    });
-    //}
-            callback();
 };
 
 
