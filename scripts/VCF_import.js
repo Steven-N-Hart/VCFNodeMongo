@@ -61,7 +61,7 @@ MongoClient.connect(url, function (err, db) {
  ################################################################*/
 var readMyFileLineByLine  = function (db, filepath, callback) {
     var lineNum = 1;
-    var totalLines = 29; ///exec("wc -l " + filepath);
+    var preLines = 1;
    // console.log(lineNum,totalLines);
     var lr = new LineByLineReader(filepath);
     lr.on('error', function (err) {
@@ -70,6 +70,9 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
         console.log("Line reading finished");
         //callback(); this emits before db operations are done...cannot close here.
     }).on('line', function (line) {
+        preLines++;
+        //console.log(["linenum",lineNum,"totallines",preLines]);
+
         // 'line' contains the current line without the trailing newline character.
         // skip lines here to avoid unnecessary callbacks
         if (!line.match(/^##/)) {
@@ -85,8 +88,8 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
                 processLines(line, db, function () {
                     lineNum++;
                     // sorta hacky....this is due to how  LineByLineReader emits events....may need to look at different file read strategy.
-                    //console.log(["linenum",lineNum,"totallines",totalLines]);
-                    if (totalLines <= lineNum) {
+                    //console.log(["linenum",lineNum,"totallines",preLines]);
+                    if (preLines <= lineNum) {
                         callback();
                     }
                 });
