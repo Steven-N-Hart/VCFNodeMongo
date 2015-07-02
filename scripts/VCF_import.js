@@ -85,7 +85,7 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
                 processLines(line, db, function () {
                     lineNum++;
                     // sorta hacky....this is due to how  LineByLineReader emits events....may need to look at different file read strategy.
-                    console.log(["linenum",lineNum,"totallines",totalLines]);
+                    //console.log(["linenum",lineNum,"totallines",totalLines]);
                     if (totalLines <= lineNum) {
                         callback();
                     }
@@ -196,7 +196,7 @@ var updateVariant = function(varObj, retVariant, db, callback){
     collection.update(retVariant,{ $pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
         if (err){ console.error(err); }
         else{
-            console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + "-" + varObj.variant.alt + "\tS=" + allSamples.length);
+            console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
         }
         callback();
     });
