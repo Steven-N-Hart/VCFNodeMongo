@@ -53,8 +53,10 @@ var getFormats  = function (strArr) {
             var myFormat = {};
             var sampFormat  = sampleArr[s].split(':');
             for (var j=0; j<formatArr.length; j++) {
-                myFormat[ formatArr[j] ] = getValue(sampFormat[j]);
-            }
+                //only keep these fields: GT:AD:DP:GQ:HQ
+                if (formatArr[j].match(/^(GT|AD|DP|GQ|HQ)$/)){
+                    myFormat[ formatArr[j] ] = getValue(sampFormat[j]);
+                }}
             myFormat['GTC'] = getGTC(myFormat['GT'])
             returnAbleArr[s] = myFormat;
         }

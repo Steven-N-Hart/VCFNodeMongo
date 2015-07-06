@@ -16,7 +16,7 @@ CmdLineOpts
     .version('0.0.1')
     .usage('[options] -n studyname -o outname')
     .option('-o, --output [text]', 'Name of output file')
-    .option('-n, --studyname [text]', 'Study Name, for importing')
+    .option('-n, --studyname [text]', 'Study Name, for exporting')
     .parse(process.argv);
 
 var ts1 = process.hrtime();
@@ -63,30 +63,28 @@ getHeader(studyIDs);
 // Build functions
 function getHeader(studyIDs){
     printHeader();
-    getSamples(studyIDs,printHeaderLine(db,SAMPLES,printVariants(SAMPLES,db))
-)
+    getSamples(studyIDs)
   };
 
 
-// Use connect method to connect to the Server to get the sample ids i need to look for
-function getSamples(studyIDs,cb){
+//Get the SampleID_ObjectID from the meta workspace
+function getSamples(studyIDs){
   var SAMPLES = [];
 
   MongoClient.connect(url, function(err, db) {
     assert.equal(null, err);
     //console.log('Connected')
     var collection = db.collection('meta');
-       collection.find({'study_id' : {$in: studyIDs}},{'_id':0,'sample_id':1}).toArray(
+       collection.find({'study_id' : {$in: studyIDs}},{'_id':1,'sample_id':1}).toArray(
             function(err, documents) {
               if (err){console.log('ERR='+err)}
-               // console.log('docs='+JSON.stringify(documents));
+               console.log('docs='+JSON.stringify(documents));
               for (var j=0; j<documents.length;j++){
-              //console.log('j='+documents[j].sample_id);
-              SAMPLES.push(documents[j].sample_id);
-            }
-            //console.log('ARRAY='+SAMPLES);
-            //db.close();
-            cb()
+                // Combine the ObjectID and human readable ID so we can parse them later
+                var ID = documents[j]['sample_id']+'_'+documents[j]['_id']
+                SAMPLES.push(ID);
+              }
+              printHeaderLine(db,SAMPLES);
             }
         );
   });
@@ -95,14 +93,19 @@ function getSamples(studyIDs,cb){
 var COUNT=0;
 
 
-function printHeaderLine(db,SAMPLES,callback) {
+function printHeaderLine(db,SAMPLES) {
+  var arrSAMPLES = [];
 	var HEADER_LINE='#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT';
 	for (var i=0;i<SAMPLES.length;i++){
-		HEADER_LINE=HEADER_LINE+'\t'+SAMPLES[i];
+    var TMP = SAMPLES[i].split('_');
+    //console.log('Human readable names is '+TMP[0])
+		HEADER_LINE=HEADER_LINE+'\t'+TMP[0];
+    //Reset the sample name to only be the objectID
+    arrSAMPLES.push(TMP[1])
 		}
 	console.log(HEADER_LINE);
 	stream.write(HEADER_LINE+'\n');
-	printVariants(SAMPLES,db);
+	printVariants(arrSAMPLES,db);
   	};
 
 
@@ -110,7 +113,7 @@ function printVariants(SAMPLES,db){
   //console.log('COUNT='+COUNT);COUNT=COUNT+1;
 	var collection = db.collection('variants');
  //console.log('studyIDs = '+studyIDs);
-    //console.log('samples = '+SAMPLES);
+console.log('SAMPLES='+SAMPLES)
   	var cursor = collection.aggregate([
       {$match : {
         'samples.sample_id':{
@@ -118,7 +121,7 @@ function printVariants(SAMPLES,db){
           }
       }},
       {
-          $unwind:"$samples"
+          $unwind:'$samples'
       },
       {
         $match:{
@@ -137,7 +140,7 @@ function printVariants(SAMPLES,db){
   	cursor.each(function(err,res){
       if(err || res == null){console.log('err = ' + err);}
 		  var variants = res;
-      //console.log('EACH results= '+JSON.stringify(variants));
+      console.log('EACH results= '+JSON.stringify(variants));
   		if(res != null){
      		var chrom = variants._id.chr;
      		var pos = variants._id.pos;
