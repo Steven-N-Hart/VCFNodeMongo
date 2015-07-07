@@ -124,7 +124,7 @@ var findSamples = function (db, ln, callback) {
         for (var i in sampleNames){
             for (var n in result) {
                 if( sampleNames[i] === result[n].sample_id ){
-                    orderedSampleids[i] = result[n]._id;
+                    orderedSampleids[i] = result[n]._id.toHexString(); //COnverted to hex string so its easier to seach later
                     continue outerloop;  // small loop efficiency
                 }
             }
@@ -194,7 +194,7 @@ var updateVariant = function(varObj, retVariant, db, callback){
     collection.update(retVariant,{ $pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
         if (err){ console.error(err); }
         else{
-            console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
+            //console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
         }
         callback();
     });
