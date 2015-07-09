@@ -80,6 +80,7 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
                 //Get sample index positions, must pause, need to have these processed before reading on.
                 findSamples(db, line, function (ret) {
                     sampleDbIds = ret;
+                    //console.log('sampleDbIds='+sampleDbIds)
                     lineNum++;
                     lr.resume();
                 });
@@ -106,9 +107,10 @@ var findSamples = function (db, ln, callback) {
     var chromLine = ln.split('\t');
     var sampleNames = chromLine.slice(9, chromLine.length); // no need for a loop.
     var collection = db.collection(config.names.sample);
-   // console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
+   //console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
 
     collection.find({"study_id" : study_id, "sample_id" : { $in : sampleNames } }).toArray(function (err, result) {
+        //console.log('Array='+JSON.stringify(result))
         assert.equal(err, null, "Sample Check Issue");
         // returns empty, if study wrong, or no samples exist
         if (result.length < 1) {
@@ -125,6 +127,7 @@ var findSamples = function (db, ln, callback) {
         for (var i in sampleNames){
             for (var n in result) {
                 if( sampleNames[i] === result[n].sample_id ){
+                    //console.log('ID='+result[n]._id.toHexString()+' n='+n+' i='+i)
                     orderedSampleids[i] = result[n]._id.toHexString(); //COnverted to hex string so its easier to seach later
                     continue outerloop;  // small loop efficiency
                 }
@@ -139,16 +142,13 @@ var findSamples = function (db, ln, callback) {
 var processLines = function (line, db, callback) {
     VariantRecord.parseVCFline(line, function(myVar){
         // file line is parsed into an object, now do database work
+        //console.log('myVar='+JSON.stringify(myVar))
         findVariant(myVar, db, function(ret) {
             updateVariant(myVar, ret, db, function() {
                 callback();
             });
         });
     });
-   /* var res = parseInputLine(line);
-    if (res !== undefined) {    ///this is problem
-        prepFormat(res, db);
-    }*/
 };
 
 
@@ -171,12 +171,18 @@ var findVariant = function(varObj, db, callback) {
     console.log("T2",process.hrtime());
         callback(found);
     });*/
+    //console.log('varObj.variant='+JSON.stringify(varObj.variant))
     collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
         assert.equal(err, null);
         if (found.lastErrorObject.updatedExisting){
+            //console.log('True: '+JSON.stringify(found))
+            //process.exit()
             callback({_id:found.value._id});
         }
         else{
+            //This particular variant has been seen before
+             //console.log('FALSE: '+JSON.stringify(found))
+            //process.exit()           
             callback( {_id:found.lastErrorObject.upserted} );
         }
     });
@@ -187,14 +193,21 @@ var findVariant = function(varObj, db, callback) {
 
 var updateVariant = function(varObj, retVariant, db, callback){
     var collection = db.collection(config.names.variant);
-
+    //console.log('varObj: '+JSON.stringify(varObj));
+    //console.log('retVariant: '+JSON.stringify(retVariant))
+    //console.log('sampleDbIds='+sampleDbIds)
     var allSamples = [];// retVariant;
     //allSamples['samples'] = [];
     for (var h in varObj.sampleFormats){
         if (varObj.sampleFormats[h] === null){ continue; } //skip samples that don't carry this variant
         varObj.sampleFormats[h]['sample_id'] = sampleDbIds[h];
+        //console.log('varObj.sampleFormats[h]-='+JSON.stringify(varObj.sampleFormats[h]))
+        //console.log('sampleDbIds[h]='+sampleDbIds[h])
         allSamples.push(varObj.sampleFormats[h]);
     }
+    //console.log('retVariant: '+JSON.stringify(retVariant))
+    //console.log('SAMPLES: '+JSON.stringify(allSamples))
+    //process.exit() 
     /// This makes one query, updates any changes & inserts anything new
     collection.update(retVariant,{ $pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
         if (err){ console.error(err); }

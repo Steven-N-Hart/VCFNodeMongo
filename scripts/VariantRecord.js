@@ -43,10 +43,12 @@ var getValue  = function (variable) {
 
 var getFormats  = function (strArr) {
     var formatArr = strArr[8].split(':');
+    //console.log('formatArr'+formatArr)
     var sampleArr = strArr.slice(9,strArr.length);
     var returnAbleArr = [];
     for (var s=0; s<sampleArr.length; s++) {
-        if ( sampleArr[s].match(/\.\/\./) ){
+        //console.log('looking at '+sampleArr[s])
+        if ( sampleArr[s].match(/^\.\/\./) ){
             returnAbleArr[s] = null;
         }
         else{
@@ -55,12 +57,17 @@ var getFormats  = function (strArr) {
             for (var j=0; j<formatArr.length; j++) {
                 //only keep these fields: GT:AD:DP:GQ:HQ
                 if (formatArr[j].match(/^(GT|AD|DP|GQ|HQ)$/)){
-                    myFormat[ formatArr[j] ] = getValue(sampFormat[j]);
+                    var res = getValue(sampFormat[j])
+                    if (res !== '\.'){
+                        myFormat[ formatArr[j] ] = res;
+                    }
                 }}
             myFormat['GTC'] = getGTC(myFormat['GT'])
             returnAbleArr[s] = myFormat;
         }
     }
+    //console.log('returnAbleArr='+JSON.stringify(returnAbleArr))
+    //process.exit()
     return returnAbleArr;
 };
 
