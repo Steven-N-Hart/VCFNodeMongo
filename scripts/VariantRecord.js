@@ -1,6 +1,41 @@
 /*jslint node: true */
 /* object class for parsing and retaining variant */
 
+//Get header
+function get_headerLine(filename, callback) {
+    var stream = fs.createReadStream(filename, {
+      flags: 'r',
+      encoding: 'utf-8',
+      fd: null,
+      mode: 0666,
+      bufferSize: 64 * 1024
+    });
+
+    var fileData = '';
+    stream.on('data', function(data){
+      fileData += data;
+
+      // The next lines should be improved
+      var lines = fileData.split("\n");
+
+      if(lines.match(/^#CHROM/) ){
+        stream.destroy();
+        console.log('LINES[0]='+lines[0])
+        process.exit()
+        callback(null, lines[0]);
+      }
+    });
+
+    stream.on('error', function(){
+      callback('Error', null);
+    });
+
+    stream.on('end', function(){
+      callback('File end reached without finding line', null);
+    });
+
+}
+
 //Get number of alt genotypes
 function getGTC(GT) {
     GT = JSON.stringify(GT);
