@@ -44,3 +44,8 @@ Anything else is optional (e.g. case or control, substudy, etc)
 ```Usage: node scripts/VCF_annotationExport.js -o outname ```
 
 This script gets all variants from the DB that need annotation 
+
+#### 5. Importing variant annotation
+```Usage: node scripts/Anno_import.js -i examples/Annotation.txt ```
+
+This script adds annotations to the variant DB from a TSV file.  It requires the first 4 coulmns to be "#CHROM POS REF ALT". 
