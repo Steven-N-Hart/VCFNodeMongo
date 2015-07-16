@@ -3,8 +3,18 @@
 
 ###VCF_export
 1.  Validate large file output
+2.  GroupBy query
 
 ###TSV_annotationImport
 1. require chrom, pos, ref, alt
 2. All other headers get scrubbed for non-unicode characters
 3. add to annotation object
+ 
+###Server
+1.  Get Authentication (OAuth/OmniAuth - Google only for now)
+2.  Authorization
+3.  Admin role in config.json
+
+###APIs
+2. 
+
