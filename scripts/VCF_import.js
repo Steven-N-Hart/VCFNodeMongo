@@ -38,6 +38,7 @@ if (!CmdLineOpts.studyname) {
 
 //Get study ID
 var study_id = CmdLineOpts.studyname;
+var Header = []; ///depricate this
 var sampleDbIds = [];
 
 
@@ -71,6 +72,7 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
     }).on('line', function (line) {
         preLines++;
         //console.log(["linenum",lineNum,"totallines",preLines]);
+
         // 'line' contains the current line without the trailing newline character.
         // skip lines here to avoid unnecessary callbacks
         if (!line.match(/^##/)) {
@@ -78,6 +80,7 @@ var readMyFileLineByLine  = function (db, filepath, callback) {
                 //Get sample index positions, must pause, need to have these processed before reading on.
                 findSamples(db, line, function (ret) {
                     sampleDbIds = ret;
+                    //console.log('sampleDbIds='+sampleDbIds)
                     lineNum++;
                     lr.resume();
                 });
@@ -104,9 +107,10 @@ var findSamples = function (db, ln, callback) {
     var chromLine = ln.split('\t');
     var sampleNames = chromLine.slice(9, chromLine.length); // no need for a loop.
     var collection = db.collection(config.names.sample);
-   // console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
+   //console.log({"study_id" : study_id, "sample_id" : { $in : sampleNames } });
 
     collection.find({"study_id" : study_id, "sample_id" : { $in : sampleNames } }).toArray(function (err, result) {
+        //console.log('Array='+JSON.stringify(result))
         assert.equal(err, null, "Sample Check Issue");
         // returns empty, if study wrong, or no samples exist
         if (result.length < 1) {
@@ -123,6 +127,7 @@ var findSamples = function (db, ln, callback) {
         for (var i in sampleNames){
             for (var n in result) {
                 if( sampleNames[i] === result[n].sample_id ){
+                    //console.log('ID='+result[n]._id.toHexString()+' n='+n+' i='+i)
                     orderedSampleids[i] = result[n]._id.toHexString(); //COnverted to hex string so its easier to seach later
                     continue outerloop;  // small loop efficiency
                 }
@@ -137,6 +142,7 @@ var findSamples = function (db, ln, callback) {
 var processLines = function (line, db, callback) {
     VariantRecord.parseVCFline(line, function(myVar){
         // file line is parsed into an object, now do database work
+        //console.log('myVar='+JSON.stringify(myVar))
         findVariant(myVar, db, function(ret) {
             updateVariant(myVar, ret, db, function() {
                 callback();
@@ -149,29 +155,59 @@ var processLines = function (line, db, callback) {
 
 var findVariant = function(varObj, db, callback) {
     var collection = db.collection(config.names.variant);
+    // Find this variant
+   /* collection.findOne(varObj.variant, function(err, found) {
+          might be faster? i don't know
+    /*
+    if(found === null){
+    collection.save(varObj.variant, function(err, doc){
+    console.log("T3",process.hrtime());
+    assert.equal(err, null);
+    callback(doc);
+    });
+    }
+    /// varObj.variant.needsAnnotation = true; There may be a better way to query this.
 
+    console.log("T2",process.hrtime());
+        callback(found);
+    });*/
+    //console.log('varObj.variant='+JSON.stringify(varObj.variant))
     collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
         assert.equal(err, null);
         if (found.lastErrorObject.updatedExisting){
+            //console.log('True: '+JSON.stringify(found))
+            //process.exit()
             callback({_id:found.value._id});
         }
         else{
+            //This particular variant has been seen before
+             //console.log('FALSE: '+JSON.stringify(found))
+            //process.exit()           
             callback( {_id:found.lastErrorObject.upserted} );
         }
     });
 };
 
 
+
+
 var updateVariant = function(varObj, retVariant, db, callback){
     var collection = db.collection(config.names.variant);
-
+    //console.log('varObj: '+JSON.stringify(varObj));
+    //console.log('retVariant: '+JSON.stringify(retVariant))
+    //console.log('sampleDbIds='+sampleDbIds)
     var allSamples = [];// retVariant;
     //allSamples['samples'] = [];
     for (var h in varObj.sampleFormats){
         if (varObj.sampleFormats[h] === null){ continue; } //skip samples that don't carry this variant
         varObj.sampleFormats[h]['sample_id'] = sampleDbIds[h];
+        //console.log('varObj.sampleFormats[h]-='+JSON.stringify(varObj.sampleFormats[h]))
+        //console.log('sampleDbIds[h]='+sampleDbIds[h])
         allSamples.push(varObj.sampleFormats[h]);
     }
+    //console.log('retVariant: '+JSON.stringify(retVariant))
+    //console.log('SAMPLES: '+JSON.stringify(allSamples))
+    //process.exit() 
     /// This makes one query, updates any changes & inserts anything new
     collection.update(retVariant,{ $pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
         if (err){ console.error(err); }
@@ -184,19 +220,209 @@ var updateVariant = function(varObj, retVariant, db, callback){
 
 
 
-// Option for Find variant
-/* collection.findOne(varObj.variant, function(err, found) {
- might be faster? i don't know
- /*
- if(found === null){
- collection.save(varObj.variant, function(err, doc){
- console.log("T3",process.hrtime());
- assert.equal(err, null);
- callback(doc);
- });
- }
- /// varObj.variant.needsAnnotation = true; There may be a better way to query this.
 
- console.log("T2",process.hrtime());
- callback(found);
- });*/
+
+
+
+
+//Async Code
+var findDocument = function (OBJ, setQuery1, setQuery2, db) {
+    // Get the documents collection
+    var collection = db.collection('variants');
+
+    // Insert some documents
+    collection.findOne(
+        {"chr": OBJ.chr, "pos": OBJ.pos, "ref": OBJ.ref, "alt": OBJ.alt},
+        function (err, result) {
+            assert.equal(err, null);
+            console.log("result = " + JSON.stringify(result) + " typeof " + typeof result);
+            if (result === null) {
+                //console.log('Need to insert new record');
+                OBJ.needsAnnotation = true;
+                collection.insert(OBJ, function (err, result) {
+                    assert.equal(err, null);
+                    //console.log('Inserted '+ result);
+                });
+            }
+            else {
+                for (var j = 0; j < OBJ.samples.length; j++) {
+                    //See if that sample already exists
+                    var sampleExists = false;
+                    for (var i = 0; i < result.samples.length; i++) {
+                        if (result.samples[i].sample == OBJ.samples[j].sample) {
+                            //console.log('Sample '+ OBJ.samples[j].sample+' already exists at position '+ i);
+                            // Replace the samples[j] field
+                            collection.updateOne(
+                                {
+                                    "chr": OBJ.chr,
+                                    "pos": OBJ.pos,
+                                    "ref": OBJ.ref,
+                                    "alt": OBJ.alt,
+                                    "samples.sample_id": OBJ.samples[j].sample_id,
+                                    "samples.study_id": OBJ.samples[j].study_id
+                                },
+                                {"$set": setQuery2},
+                                function (err2, results3) {
+                                    //console.log('Situation3 = '+results3);
+                                });
+                            sampleExists = true;
+                        }
+                        ;
+                    }//End i
+                    // If you've gone through all of I and sampleExists is still false, push into array
+                    if (sampleExists === false) {
+                        //push sample data into the array
+                        //console.log('I need to push this sample into the array')
+                        collection.updateOne(
+                            {"chr": OBJ.chr, "pos": OBJ.pos, "ref": OBJ.ref, "alt": OBJ.alt},
+                            {"$push": {samples: setQuery1}},
+                            function (err2, results4) {
+                                // console.log('Situation4 = '+results4);
+                            });
+                    }
+                }//End j
+            }//End else
+            //db.close();
+        }
+    )
+};
+
+
+// Prepare format for query
+function prepFormat(res, db) {
+    if (typeof res !== 'undefined') {
+        var _id = res.shift();
+        var PIECE1 = [];
+        var PIECE2 = [];
+        //var res = [];
+        _id = _id._id;
+        //console.log('res='+JSON.stringify(res));
+        for (var j = 0; j < res.length; j++) {
+            //console.log('sample='+res[j]['sample']);
+            var line = {};
+            line['chr'] = _id.chr;
+            line['pos'] = Number(_id.pos);
+            line['ref'] = _id.ref;
+            line['alt'] = _id.alt;
+            var SAMPLE = res[j]['sample_id'];
+            var STUDY = res[j]['study_id'];
+
+            // Now create set string for remaining variables
+            delete res[j].study_id;
+            delete res[j].sample_id;
+            delete res[j]._id;
+            //Get genotype count (GTC)
+            var GTC = getGTC(res[j]['GT'])
+
+            var setQuery1 = {'samples.$.GTC':GTC};
+            var setQuery2 = {'GTC':GTC};
+            for (var key in res[j]) {
+                var attrName1 = key;
+                var attrName2 = key;
+                var attrValue1 = res[j][key];
+                var attrValue2 = res[j][key];
+                attrName1 = 'samples.$.' + attrName1;
+                setQuery1[attrName1] = attrValue1;
+                attrName2 = attrName2;
+                setQuery2[attrName2] = attrValue2;
+            }
+            //Add in GenotTypeCount
+            setQuery2['study_id'] = String(STUDY);
+            setQuery2['sample_id'] = String(SAMPLE);
+            //console.log('Q1: '+JSON.stringify(setQuery1));
+            //console.log('Q2: '+JSON.stringify(setQuery2));
+            PIECE2.push(setQuery2);
+            PIECE1.push(setQuery1);
+        } //End J
+        line.samples = PIECE2;
+        findDocument(line, PIECE1, PIECE2, db);
+    } //End typeof
+}
+
+
+function parseInputLine(line) {
+    var Variant = {};
+        var Row = line.split('\t');
+        var FORMAT = Row[8].split(':');
+        var pos = Row[1];
+        if (Row[4].match(',')) {
+            console.log('I cannot handle multiple alleles');
+            console.log(line);
+        }
+        else {
+            var _id = {chr: Row[0], pos: Number(pos), ref: Row[3], alt: Row[4]};
+            var lineArray = [{_id: _id}];
+            for (var k = 9; k < Row.length; k++) {
+                var sample_id = Header[k];
+                var formatdata = {study_id: study_id, _id: _id};
+                formatdata['sample_id'] = sample_id;
+                //formatdata.sample = sample_id;
+                if (!Row[k].match(/\.\/\./)) {
+                    for (var j = 0; j < FORMAT.length; j++) {
+                        //Create an array to store objects of SampleID and SampleFormat
+                        var sampleFormat = Row[k].split(':');
+                        var result = getValue(sampleFormat[j]);
+                        //Set key-value pairs in formatdata
+                        formatdata[FORMAT[j]] = result;
+                    }//End format parsing
+                } //End sample-level parsing
+                //Only keep the samples with data
+                if (typeof formatdata.GT !== 'undefined') {
+                    lineArray.push(formatdata);
+                }
+            } // End All Samples
+            //Insert my array into the complete object
+            console.log(lineArray);
+            return lineArray;
+        }
+}//end function
+
+
+//Get number of alt genotypes
+function getGTC(GT) {
+    GT=JSON.stringify(GT)
+    GT=GT.replace(/[\/\|\.0\"]/gi, '')
+    return GT.length
+}
+
+
+
+function getValue(variable) {
+    // for each value, convert to a number if it is one.
+    var a = variable.split(',');
+    //console.log("figuring out what to do with "+a);
+    var result = '';
+    if (a.length > 1) {
+        result = numberOrStringMulti(a);
+    }
+    else {
+        result = numberOrStringSingle(a);
+    }
+    return result;
+}
+
+function numberOrStringMulti(variable) {
+    var result = variable.map(function (x) {
+        if (isNaN(Number(x))) {
+            if (x !== '.') {
+                return String(x);
+            }
+        }
+        else {
+            return Number(x);
+        }
+    });
+    return result;
+}
+function numberOrStringSingle(x) {
+    var result = '';
+    if (isNaN(Number(x))) {
+        if (x !== '.') {
+            result = String(x);
+        }
+    }
+    else {
+        result = Number(x);
+    }
+    return result;
+}

@@ -1,6 +1,41 @@
 /*jslint node: true */
 /* object class for parsing and retaining variant */
 
+//Get header
+function get_headerLine(filename, callback) {
+    var stream = fs.createReadStream(filename, {
+      flags: 'r',
+      encoding: 'utf-8',
+      fd: null,
+      mode: 0666,
+      bufferSize: 64 * 1024
+    });
+
+    var fileData = '';
+    stream.on('data', function(data){
+      fileData += data;
+
+      // The next lines should be improved
+      var lines = fileData.split("\n");
+
+      if(lines.match(/^#CHROM/) ){
+        stream.destroy();
+        console.log('LINES[0]='+lines[0])
+        process.exit()
+        callback(null, lines[0]);
+      }
+    });
+
+    stream.on('error', function(){
+      callback('Error', null);
+    });
+
+    stream.on('end', function(){
+      callback('File end reached without finding line', null);
+    });
+
+}
+
 //Get number of alt genotypes
 function getGTC(GT) {
     GT = JSON.stringify(GT);
@@ -43,10 +78,12 @@ var getValue  = function (variable) {
 
 var getFormats  = function (strArr) {
     var formatArr = strArr[8].split(':');
+    //console.log('formatArr'+formatArr)
     var sampleArr = strArr.slice(9,strArr.length);
     var returnAbleArr = [];
     for (var s=0; s<sampleArr.length; s++) {
-        if ( sampleArr[s].match(/\.\/\./) ){
+        //console.log('looking at '+sampleArr[s])
+        if ( sampleArr[s].match(/^\.\/\./) ){
             returnAbleArr[s] = null;
         }
         else{
@@ -55,12 +92,17 @@ var getFormats  = function (strArr) {
             for (var j=0; j<formatArr.length; j++) {
                 //only keep these fields: GT:AD:DP:GQ:HQ
                 if (formatArr[j].match(/^(GT|AD|DP|GQ|HQ)$/)){
-                    myFormat[ formatArr[j] ] = getValue(sampFormat[j]);
+                    var res = getValue(sampFormat[j])
+                    if (res !== '\.'){
+                        myFormat[ formatArr[j] ] = res;
+                    }
                 }}
             myFormat['GTC'] = getGTC(myFormat['GT'])
             returnAbleArr[s] = myFormat;
         }
     }
+    //console.log('returnAbleArr='+JSON.stringify(returnAbleArr))
+    //process.exit()
     return returnAbleArr;
 };
 
