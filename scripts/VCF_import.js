@@ -38,7 +38,6 @@ if (!CmdLineOpts.studyname) {
 
 //Get study ID
 var study_id = CmdLineOpts.studyname;
-var Header = []; ///depricate this
 var sampleDbIds = [];
 
 
@@ -150,22 +149,7 @@ var processLines = function (line, db, callback) {
 
 var findVariant = function(varObj, db, callback) {
     var collection = db.collection(config.names.variant);
-    // Find this variant
-   /* collection.findOne(varObj.variant, function(err, found) {
-          might be faster? i don't know
-    /*
-    if(found === null){
-    collection.save(varObj.variant, function(err, doc){
-    console.log("T3",process.hrtime());
-    assert.equal(err, null);
-    callback(doc);
-    });
-    }
-    /// varObj.variant.needsAnnotation = true; There may be a better way to query this.
 
-    console.log("T2",process.hrtime());
-        callback(found);
-    });*/
     collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
         assert.equal(err, null);
         if (found.lastErrorObject.updatedExisting){
@@ -176,8 +160,6 @@ var findVariant = function(varObj, db, callback) {
         }
     });
 };
-
-
 
 
 var updateVariant = function(varObj, retVariant, db, callback){
@@ -199,3 +181,22 @@ var updateVariant = function(varObj, retVariant, db, callback){
         callback();
     });
 };
+
+
+
+// Option for Find variant
+/* collection.findOne(varObj.variant, function(err, found) {
+ might be faster? i don't know
+ /*
+ if(found === null){
+ collection.save(varObj.variant, function(err, doc){
+ console.log("T3",process.hrtime());
+ assert.equal(err, null);
+ callback(doc);
+ });
+ }
+ /// varObj.variant.needsAnnotation = true; There may be a better way to query this.
+
+ console.log("T2",process.hrtime());
+ callback(found);
+ });*/
