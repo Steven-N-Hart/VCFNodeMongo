@@ -1,5 +1,6 @@
 sample_id	study_id	kit_id	Extra_1	STATUS
 EX2	TEST	KIT1	placeholder	case
 EX3	TEST	KIT1		control
+EX4	TEST	KIT1		control
 EX1	TEST	KIT1	with spaces	case
 HG00098	1KG	1KGenomes	test example	control

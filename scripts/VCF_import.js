@@ -171,18 +171,23 @@ var findVariant = function(varObj, db, callback) {
     console.log("T2",process.hrtime());
         callback(found);
     });*/
-    //console.log('varObj.variant='+JSON.stringify(varObj.variant))
+    //console.log('varObj.variant='+JSON.stringify(varObj));
+                                               //varObj.variant,
+   // var updateableVar = varObj.variant;
+    //updateableVar['$setOnInsert'] = {needsAnnotation: true};
+    //                                     {$setOnInsert: {needsAnnotation: true}}
+    //console.log('varObj.variant='+JSON.stringify(updateableVar));
     collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
         assert.equal(err, null);
         if (found.lastErrorObject.updatedExisting){
-            //console.log('True: '+JSON.stringify(found))
-            //process.exit()
-            callback({_id:found.value._id});
+            collection.update({_id:found.value._id, needsAnnotation: true}, function(err, fnd) {
+                // console.log("NEW! ",found.value);
+                callback({_id:found.value._id});
+            });
         }
         else{
+           // console.log("Old: ",found);
             //This particular variant has been seen before
-             //console.log('FALSE: '+JSON.stringify(found))
-            //process.exit()           
             callback( {_id:found.lastErrorObject.upserted} );
         }
     });
@@ -192,24 +197,19 @@ var findVariant = function(varObj, db, callback) {
 
 
 var updateVariant = function(varObj, retVariant, db, callback){
+    //console.log('varObj.variant='+JSON.stringify(varObj));
+    //console.log('retVariant='+JSON.stringify(retVariant));
+
     var collection = db.collection(config.names.variant);
-    //console.log('varObj: '+JSON.stringify(varObj));
-    //console.log('retVariant: '+JSON.stringify(retVariant))
-    //console.log('sampleDbIds='+sampleDbIds)
     var allSamples = [];// retVariant;
-    //allSamples['samples'] = [];
     for (var h in varObj.sampleFormats){
         if (varObj.sampleFormats[h] === null){ continue; } //skip samples that don't carry this variant
         varObj.sampleFormats[h]['sample_id'] = sampleDbIds[h];
-        //console.log('varObj.sampleFormats[h]-='+JSON.stringify(varObj.sampleFormats[h]))
-        //console.log('sampleDbIds[h]='+sampleDbIds[h])
         allSamples.push(varObj.sampleFormats[h]);
     }
-    //console.log('retVariant: '+JSON.stringify(retVariant))
-    //console.log('SAMPLES: '+JSON.stringify(allSamples))
-    //process.exit() 
+
     /// This makes one query, updates any changes & inserts anything new
-    collection.update(retVariant,{ $pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
+    collection.update(retVariant,{$pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
         if (err){ console.error(err); }
         else{
             //console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
