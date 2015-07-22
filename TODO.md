@@ -1,5 +1,5 @@
 ###VCF_import
-~~1. Need to add back needsAnnotation Flag so I know what to export~~
+1.  Make sure we don't overwrite positive calls with negative ones if the sample exists.
 
 ###VCF_export
 1.  Validate large file output
