@@ -155,35 +155,18 @@ var processLines = function (line, db, callback) {
 
 var findVariant = function(varObj, db, callback) {
     var collection = db.collection(config.names.variant);
-    // Find this variant
-   /* collection.findOne(varObj.variant, function(err, found) {
-          might be faster? i don't know
-    /*
-    if(found === null){
-    collection.save(varObj.variant, function(err, doc){
-    console.log("T3",process.hrtime());
-    assert.equal(err, null);
-    callback(doc);
-    });
-    }
-    /// varObj.variant.needsAnnotation = true; There may be a better way to query this.
-
-    console.log("T2",process.hrtime());
-        callback(found);
-    });*/
-    //console.log('varObj.variant='+JSON.stringify(varObj));
-                                               //varObj.variant,
+    //console.log('varObj.variant='+JSON.stringify(varObj));   //varObj.variant,
    // var updateableVar = varObj.variant;
-    //updateableVar['$setOnInsert'] = {needsAnnotation: true};
-    //                                     {$setOnInsert: {needsAnnotation: true}}
+    //updateableVar['$setOnInsert'] = {needsAnnotation: true}; // {$setOnInsert: {needsAnnotation: true}}
     //console.log('varObj.variant='+JSON.stringify(updateableVar));
-    collection.findOneAndUpdate(varObj.variant, varObj.variant, {upsert:true, returnOriginal:true}, function(err, found) {
+
+   collection.findOneAndUpdate(varObj.variant, {$setOnInsert: {needsAnnotation: true}}, {upsert:true, returnOriginal:true}, function(err, found) {
         assert.equal(err, null);
         if (found.lastErrorObject.updatedExisting){
-            collection.update({_id:found.value._id, needsAnnotation: true}, function(err, fnd) {
+            //collection.update({_id:found.value._id, needsAnnotation: true}, function(err, fnd) {
                 // console.log("NEW! ",found.value);
                 callback({_id:found.value._id});
-            });
+            //});
         }
         else{
            // console.log("Old: ",found);
@@ -197,9 +180,6 @@ var findVariant = function(varObj, db, callback) {
 
 
 var updateVariant = function(varObj, retVariant, db, callback){
-    //console.log('varObj.variant='+JSON.stringify(varObj));
-    //console.log('retVariant='+JSON.stringify(retVariant));
-
     var collection = db.collection(config.names.variant);
     var allSamples = [];// retVariant;
     for (var h in varObj.sampleFormats){
@@ -209,7 +189,7 @@ var updateVariant = function(varObj, retVariant, db, callback){
     }
 
     /// This makes one query, updates any changes & inserts anything new
-    collection.update(retVariant,{$pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
+    collection.update(retVariant,{$addToSet:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
         if (err){ console.error(err); }
         else{
             //console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
