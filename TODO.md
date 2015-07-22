@@ -4,6 +4,7 @@
 ###VCF_export
 1.  Validate large file output
 2.  GroupBy query
+3.  Get Annotation in VCF output (INFO field)
 
 ###TSV_annotationImport
 1. require chrom, pos, ref, alt
