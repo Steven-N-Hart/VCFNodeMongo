@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-	db: 'mongodb://localhost/give-me-a-name-here-dev',
+	db: 'mongodb://localhost/mydb_dev',
 	app: {
 		title: 'give_me_a_name_here - Development Environment'
 	},
