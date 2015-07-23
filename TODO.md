@@ -16,5 +16,12 @@
 3.  Admin role in config.json
 
 ###APIs
-2. 
+1.
+2.
 
+###Possible Names?
+1. Poly-Mut-Cache
+2. Variant-Arcade
+3. VCF-Stash
+4. Collated-Var-Index
+5. Joint-Genetic-Store
