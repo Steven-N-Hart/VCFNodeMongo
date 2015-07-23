@@ -49,3 +49,9 @@ This script gets all variants from the DB that need annotation
 ```Usage: node scripts/Anno_import.js -i examples/Annotation.txt ```
 
 This script adds annotations to the variant DB from a TSV file.  It requires the first 4 coulmns to be "#CHROM POS REF ALT". 
+
+#### 6. Server
+After the install process is over, you'll be able to run your application using Grunt, just run grunt default task:
+``` $ grunt ```
+Your application should run on the 3000 port so in your browser just go to [http://localhost:3000](http://localhost:3000)
+
