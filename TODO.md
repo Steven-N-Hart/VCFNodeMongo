@@ -1,9 +1,11 @@
 ###VCF_import
-~~1. Need to add back needsAnnotation Flag so I know what to export~~
+1.  Make sure we don't overwrite positive calls with negative ones if the sample exists.
+2.  Only add GTC if it isnt provided
 
 ###VCF_export
 1.  Validate large file output
 2.  GroupBy query
+3.  Get Annotation in VCF output (INFO field)
 
 ###TSV_annotationImport
 1. require chrom, pos, ref, alt
