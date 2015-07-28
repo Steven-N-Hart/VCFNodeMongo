@@ -1,28 +1,18 @@
 Notes for steps I need to take for query generator
 
+q='STATUS'
+
 #Get arrays of sample groups
-SID1=['559a9bb5efeea832eafa8520','559a9bb5efeea832eafa8521']
-SID2=['55b1b2d33daa7a9f4c44385b']
+//SID1=['559a9bb5efeea832eafa8520','559a9bb5efeea832eafa8521']
+//SID2=['55b1b2d33daa7a9f4c44385b']
 
 db.meta.aggregate(
    [
-     {
-       $group:
-         {
-           _id: '$study_id',
-           samples: { $push:  { "sample_id": "$sample_id" } }
-         }
-     }
+      {$group:{_id:"$"+q,samples:{$push:"$sample_id"}}}
    ]
 )
 
-
-
-
 #Get annotations to filter on
-
-
-
 
 
 db.variants.aggregate([
