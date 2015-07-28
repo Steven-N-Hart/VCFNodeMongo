@@ -64,7 +64,10 @@ db.variants.aggregate([
 
 
 
-
+Setting up Oauth:
+    Google.
+        https://developers.google.com/identity/protocols/OAuth2
+         https://console.developers.google.com/project/vcfstackingsolutionmayo - need to set up billing.
 
 
 
@@ -74,6 +77,8 @@ Third Party Dependencies:
 
     CommandLine Parsing
     https://github.com/tj/commander.js
+
+
 
 
 
