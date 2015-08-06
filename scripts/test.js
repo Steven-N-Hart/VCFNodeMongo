@@ -52,8 +52,8 @@ getSamples()
 
 
 //Get the SampleID_ObjectID from the meta workspace
-function getSamples(){
-  MongoClient.connect(url, function(err, db) {
+function getSamples() {
+  MongoClient.connect(url, function (err, db) {
     assert.equal(null, err);
     //console.log('Connected')
     var collection = db.collection('meta');
