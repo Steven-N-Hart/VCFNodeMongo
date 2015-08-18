@@ -1,3 +1,4 @@
 .idea
 *.iml
+samples/
 node_modules/

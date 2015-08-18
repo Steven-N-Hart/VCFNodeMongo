@@ -81,8 +81,11 @@ MongoClient.connect(url, function (err, db) {
     	}
         console.log('NEWLINE2: '+ newline);
     	// Make sure the kit is registered
-        var PASS = validateKit(db, newline[kitIndex] );
-   		//Make a query and insert string to more easily manage code
+      //Ignoring for now
+      //  var PASS = validateKit(db, newline[kitIndex] );
+   		
+
+      //Make a query and insert string to more easily manage code
    		var insertString ={};
    		var queryString={};
    		//get all the metadata elements from the file
