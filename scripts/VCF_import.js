@@ -158,7 +158,7 @@ var findVariant = function(varObj, db, callback) {
     //console.log('varObj.variant='+JSON.stringify(varObj.variant));   //varObj.variant,
    // var updateableVar = varObj.variant;
     //updateableVar['$setOnInsert'] = {needsAnnotation: true}; // {$setOnInsert: {needsAnnotation: true}}
-    //console.log('varObj.variant='+JSON.stringify(updateableVar));
+    //console.log('varObj.variant='+JSON.stringify(varObj.variant));
 
    collection.findOneAndUpdate(varObj.variant, {$setOnInsert: {needsAnnotation: true}}, {upsert:true, returnOriginal:true}, function(err, found) {
         assert.equal(err, null);
@@ -182,20 +182,21 @@ var findVariant = function(varObj, db, callback) {
 var updateVariant = function(varObj, retVariant, db, callback){
     var collection = db.collection(config.names.variant);
     var allSamples = [];// retVariant;
-    //console.log('retVariant: '+JSON.stringify(retVariant)) retVariant: {"_id":"55b1afbe3daa7a9f4c443850"}
+    //console.log('retVariant: '+JSON.stringify(retVariant)) //retVariant: {"_id":"55b1afbe3daa7a9f4c443850"}
     for (var h in varObj.sampleFormats){
         if (varObj.sampleFormats[h] === null){ continue; } //skip samples that don't carry this variant
         varObj.sampleFormats[h]['sample_id'] = sampleDbIds[h];
         allSamples.push(varObj.sampleFormats[h]);
     }
-    //console.log('All Samples: '+ JSON.stringify(allSamples)) [{"GT":"0|1","GQ":48,"DP":8,"HQ":[51,51],"GTC":1,"sample_id":"559a9bb5efeea832eafa8520"},{"GT":"0/1","GQ":43,"DP":5,"HQ":[null,null],"GTC":1,"sample_id":"559a9bb5efeea832eafa8521"}]
+    //console.log('All Samples: '+ JSON.stringify(allSamples)) //[{"GT":"0|1","GQ":48,"DP":8,"HQ":[51,51],"GTC":1,"sample_id":"559a9bb5efeea832eafa8520"},{"GT":"0/1","GQ":43,"DP":5,"HQ":[null,null],"GTC":1,"sample_id":"559a9bb5efeea832eafa8521"}]
     /// This makes one query, updates any changes & inserts anything new
+    //only load if there is a smple with a variant
     collection.update(retVariant,{$pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
-        if (err){ console.error(err); }
-        else{
-            //console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
-        }
-        callback();
+    if (err){ console.error(err); }
+    else{
+        console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
+    }
+    callback();
     });
 };
 

@@ -1,6 +1,7 @@
 ###VCF_import
 1.  Make sure we don't overwrite positive calls with negative ones if the sample exists.
 2.  Only add GTC if it isnt provided
+3.  Need to limit the amount of lines allowed to read in, otherwise I run out of RAM.
 
 ###VCF_export
 1.  Validate large file output

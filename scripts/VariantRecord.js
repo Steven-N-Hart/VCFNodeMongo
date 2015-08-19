@@ -69,10 +69,19 @@ function numberOrStringMulti(variable) {
 
 var getValue  = function (variable) {
     // for each value, convert to a number if it is one.
-    var a = variable.split(',');
     var result = '';
-    if (a.length > 1) { result = numberOrStringMulti(a); }
-    else { result = numberOrStringSingle(a); }
+    if (variable === undefined ){
+        result = null
+    } else {
+        if (variable.match(/,/)){
+            var a = variable.split(',');
+            //console.log('this is an array')
+            result = numberOrStringMulti(a)
+        } else {
+            var a = variable
+            result = numberOrStringSingle(a); 
+            }
+    }
     return result;
 };
 
@@ -83,7 +92,7 @@ var getFormats  = function (strArr) {
     var returnAbleArr = [];
     for (var s=0; s<sampleArr.length; s++) {
         //console.log('looking at '+sampleArr[s])
-        if ( sampleArr[s].match(/^\.\/\./) ){
+        if ( sampleArr[s].match(/^\.\/\./) || sampleArr[s].match(/^\.$/) ){
             returnAbleArr[s] = null;
         }
         else{
@@ -91,15 +100,21 @@ var getFormats  = function (strArr) {
             var sampFormat  = sampleArr[s].split(':');
             for (var j=0; j<formatArr.length; j++) {
                 //only keep these fields: GT:AD:DP:GQ:HQ
+                // if the GT is not ./.
                 if (formatArr[j].match(/^(GT|AD|DP|GQ|HQ)$/)){
+                    //console.log('Format of '+j+'='+formatArr[j]+'\t'+sampFormat[j]+'\tSampleArrs='+sampleArr[s])
                     var res = getValue(sampFormat[j])
+                    //console.log('sample value = '+ res +' from '+ formatArr[j] + ' and ' + sampFormat[j])
                     if (res !== '\.'){
-                        myFormat[ formatArr[j] ] = res;
+                            myFormat[ formatArr[j] ] = res;
                     }
-                }}
+                }
+            }
             myFormat['GTC'] = getGTC(myFormat['GT'])
             returnAbleArr[s] = myFormat;
-        }
+             //console.log('returnAbleArr[s]='+JSON.stringify(returnAbleArr[s]))
+
+        }     
     }
     //console.log('returnAbleArr='+JSON.stringify(returnAbleArr))
     //process.exit()
