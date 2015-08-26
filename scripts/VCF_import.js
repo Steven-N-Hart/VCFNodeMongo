@@ -8,6 +8,8 @@ var LineByLineReader = require('line-by-line');
 var assert = require('assert');
 var config = require('./config.json');
 var VariantRecord = require('./VariantRecord.js');
+var fs = require('fs');
+
 //var logger = require('./winstonLog');
 //        ///   logger.info('log to file');
 
@@ -25,15 +27,15 @@ var ts1 = process.hrtime();
 
 //Make sure are variables are set
 if (!CmdLineOpts.input) {
-    console.log("\nMissing Input VCF file.");
-    CmdLineOpts.outputHelp();
-    process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
+  console.log("\nMissing Input VCF file.");
+  CmdLineOpts.outputHelp();
+  process.exit(27); // Exit Code 27: IC68342 = Missing Input Parameters
 }
 
 if (!CmdLineOpts.studyname) {
-    console.log("\nMissing Study Name.");
-    CmdLineOpts.outputHelp();
-    process.exit(27);
+  console.log("\nMissing Study Name.");
+  CmdLineOpts.outputHelp();
+  process.exit(27);
 }
 
 //Get study ID
@@ -45,61 +47,92 @@ var sampleDbIds = [];
 // Use connect method to connect to the Server
 var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
 MongoClient.connect(url, function (err, db) {
-    assert.equal(null, err);
-
-    readMyFileLineByLine(db, CmdLineOpts.input, function () {
-        // Time reporting - callback
-        var ts2 = process.hrtime(ts1);
-        console.log('\n Total Time: %j s %j ms', ts2[0], (ts2[1] / 1000000));
-        db.close();
-    });
+  assert.equal(null, err);
+  //readMyFileLineByLine(db, CmdLineOpts.input, function () {
+  getSampleInfoFromFile(db, CmdLineOpts.input, function () {
+  // Time reporting - callback
+    getDataFromFile(db, CmdLineOpts.input);
+    var ts2 = process.hrtime(ts1);
+    console.log('\n Total Time: %j s %j ms', ts2[0], (ts2[1] / 1000000));
+    //db.close();
+  });
 });
 
+/*###############################################################
+ # Test new filereader
+ ################################################################*/
+
+var linediff = 0;
+var numbInserted = 0;
+var lineNum = 1;
+
+//Get sample info
+//Sychronus reading of file
+var getSampleInfoFromFile  = function (db, filepath, callback) {
+  var lr = new LineByLineReader(filepath);
+  lr.on('error', function (err) {
+    // 'err' contains error object
+    console.log('Error reading file', err);
+  });
+
+  lr.on('line', function (line) {
+    // 'line' contains the current line without the trailing newline character.
+    if (line.match(/^#CHROM/)) {
+      findSamples(db, line, function (ret) {
+        sampleDbIds = ret;
+        lr.close(); //Stop reading file.  This caused memory leak
+        callback(db, filepath);
+      });
+    }
+  });
+
+  lr.on('end', function () {
+    // All lines are read, file is closed now.
+    console.log('Done reading file the first time');
+  });
+};
+
+
+
+var fs = require('fs')
+  , util = require('util')
+  , stream = require('stream')
+  , es = require("event-stream");
+
+var getDataFromFile  = function (db, filepath) {
+    var s;
+    s = fs.createReadStream(filepath)
+      .pipe(es.split())
+      .pipe(es.mapSync(function (line) {
+       // pause the readstream - if the memory leak comes back, uncomment this and the resume, but it slows things down (3X)
+        //s.pause();
+
+
+        //lineNum += 1;
+
+        (function () {
+            // process line here and call s.resume() when rdy
+          if (!line.match(/^#/)) {
+            processLines(line, lineNum, db, function () {
+                //console.log(lineNum)
+            });
+          }
+          // resume the readstream
+          //s.resume(); //- if the memory leak comes back, uncomment this and the resume, but it slows things down
+        })();
+      })
+        .on('error', function () {
+          console.log('Error while reading file.');
+        })
+        .on('end', function () {
+          console.log('Read entirefile.');
+        })
+        );
+  }
 
 /*###############################################################
  # Define functions
  ################################################################*/
-var readMyFileLineByLine  = function (db, filepath, callback) {
-    var lineNum = 1;
-    var preLines = 1;
-   // console.log(lineNum,totalLines);
-    var lr = new LineByLineReader(filepath);
-    lr.on('error', function (err) {
-        console.error(err);
-    }).on('end', function () {
-        console.log("Line reading finished");
-        //callback(); this emits before db operations are done...cannot close here.
-    }).on('line', function (line) {
-        preLines++;
-        //console.log(["linenum",lineNum,"totallines",preLines]);
-
-        // 'line' contains the current line without the trailing newline character.
-        // skip lines here to avoid unnecessary callbacks
-        if (!line.match(/^##/)) {
-            if (line.match(/^#CHROM/)) {
-                //Get sample index positions, must pause, need to have these processed before reading on.
-                findSamples(db, line, function (ret) {
-                    sampleDbIds = ret;
-                    //console.log('sampleDbIds='+sampleDbIds)
-                    lineNum++;
-                    lr.resume();
-                });
-                lr.pause();
-            } else {
-                processLines(line, db, function () {
-                    lineNum++;
-                    // sorta hacky....this is due to how  LineByLineReader emits events....may need to look at different file read strategy.
-                    //console.log(["linenum",lineNum,"totallines",preLines]);
-                    if (preLines <= lineNum) {
-                        callback();
-                    }
-                });
-               // console.log("Line ---- " + line);
-            }
-        }
-        else { lineNum++; }
-    });
-};
 
 
 // One database transaction for getting samples back...if all aren't already registered...accept none!
@@ -139,12 +172,13 @@ var findSamples = function (db, ln, callback) {
 
 
 //Process line
-var processLines = function (line, db, callback) {
+var processLines = function (line,lineNum, db, callback) {
     VariantRecord.parseVCFline(line, function(myVar){
         // file line is parsed into an object, now do database work
         //console.log('myVar='+JSON.stringify(myVar))
+        //console.log(linediff)
         findVariant(myVar, db, function(ret) {
-            updateVariant(myVar, ret, db, function() {
+            updateVariant(myVar, ret, db, lineNum,function() {
                 callback();
             });
         });
@@ -164,13 +198,14 @@ var findVariant = function(varObj, db, callback) {
         assert.equal(err, null);
         if (found.lastErrorObject.updatedExisting){
             //collection.update({_id:found.value._id, needsAnnotation: true}, function(err, fnd) {
-                // console.log("NEW! ",found.value);
+                 //console.log("NEW! ",found.value);
                 //This entry has been seen before
                 callback({_id:found.value._id});
             //});
         }
         else{
             //This particular variant has not been seen before
+            //console.log("Old! ",found.value);
             callback( {_id:found.lastErrorObject.upserted} );
         }
     });
@@ -179,7 +214,7 @@ var findVariant = function(varObj, db, callback) {
 
 
 
-var updateVariant = function(varObj, retVariant, db, callback){
+var updateVariant = function(varObj, retVariant, db, lineNum,callback){
     var collection = db.collection(config.names.variant);
     var allSamples = [];// retVariant;
     //console.log('retVariant: '+JSON.stringify(retVariant)) //retVariant: {"_id":"55b1afbe3daa7a9f4c443850"}
@@ -191,13 +226,17 @@ var updateVariant = function(varObj, retVariant, db, callback){
     //console.log('All Samples: '+ JSON.stringify(allSamples)) //[{"GT":"0|1","GQ":48,"DP":8,"HQ":[51,51],"GTC":1,"sample_id":"559a9bb5efeea832eafa8520"},{"GT":"0/1","GQ":43,"DP":5,"HQ":[null,null],"GTC":1,"sample_id":"559a9bb5efeea832eafa8521"}]
     /// This makes one query, updates any changes & inserts anything new
     //only load if there is a smple with a variant
+
     collection.update(retVariant,{$pushAll:{samples:allSamples}},{upsert:true,safe:false}, function (err,data) {
-    if (err){ console.error(err); }
+    if (err){ console.error(err); process.exit()}
     else{
-        console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length);
+        //numbInserted++;
+        //linediff=lineNum - numbInserted
+        //console.log("Var " + varObj.variant.chr + ":" + varObj.variant.pos + " " + varObj.variant.ref + ">" + varObj.variant.alt + "\tS=" + allSamples.length,'\tInserted='+numbInserted+'\tOn Line ='+lineNum,'\tDifference='+linediff);
     }
     callback();
     });
+    
 };
 
 
