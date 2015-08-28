@@ -17,9 +17,9 @@ Scripts I have right now:
 
 #### 1. Importing Variants
 	
-```Usage: VCF_import.js -i [vcf_file] -n [study_name] ```
+```Usage: node --max_old_space_size=6144 VCF_import.js -i [vcf_file] -n [study_name] ```
 
-This script takes a VCF and imports it into the mongodb database
+This script takes a VCF and imports it into the mongodb database.  I had to bump up the memory so it wouldn't die.  Probably don't need it since I added the index (Thanx Dan Q).
 
 * Known issues:
 		Doesn't automatically close when finished

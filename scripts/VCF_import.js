@@ -78,6 +78,9 @@ var getSampleInfoFromFile  = function (db, filepath, callback) {
   lr.on('line', function (line) {
     // 'line' contains the current line without the trailing newline character.
     if (line.match(/^#CHROM/)) {
+        //turn on indexing
+        var collection = db.collection(config.names.variant);
+        collection.ensureIndex("pos",function (){})
       findSamples(db, line, function (ret) {
         sampleDbIds = ret;
         lr.close(); //Stop reading file.  This caused memory leak
@@ -88,7 +91,7 @@ var getSampleInfoFromFile  = function (db, filepath, callback) {
 
   lr.on('end', function () {
     // All lines are read, file is closed now.
-    console.log('Done reading file the first time');
+    //console.log('Done reading file the first time');
   });
 };
 
@@ -125,7 +128,11 @@ var getDataFromFile  = function (db, filepath) {
           console.log('Error while reading file.');
         })
         .on('end', function () {
+
           console.log('Read entirefile.');
+        var ts2 = process.hrtime(ts1);
+        console.log('\n Total Time: %j s %j ms', ts2[0], (ts2[1] / 1000000));
+        setTimeout(function(){ db.close(); }, 3000);   //THIS IS VERY HACKY AND WILL NOT ALWAYS WORK!
         })
         );
   }

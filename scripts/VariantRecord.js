@@ -127,6 +127,7 @@ var getFormats  = function (strArr) {
 module.exports = {
     parseVCFline : function(vcfLine, callback){
         var row = vcfLine.split('\t');
+        if (row[4] === undefined){return}
         if (row[4].match(',')) {
             console.error(vcfLine);
             throw ('I cannot handle multiple alleles!!!');
