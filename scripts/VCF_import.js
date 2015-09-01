@@ -21,6 +21,7 @@ CmdLineOpts
     .usage('[options] -i <file> -n studyname')
     .option('-i, --input [file]', 'VCF file to be processed')
     .option('-n, --studyname [text]', 'Study Name, for importing')
+    .option('-N, --newOnly', 'Only add in new variants (excludes 0/0)')
     .parse(process.argv);
 var ts1 = process.hrtime();
 
@@ -80,7 +81,8 @@ var getSampleInfoFromFile  = function (db, filepath, callback) {
     if (line.match(/^#CHROM/)) {
         //turn on indexing
         var collection = db.collection(config.names.variant);
-        collection.ensureIndex("pos",function (){})
+        collection.ensureIndex("pos",function (){});
+        collection.ensureIndex("samples.sample_id",function (){});
       findSamples(db, line, function (ret) {
         sampleDbIds = ret;
         lr.close(); //Stop reading file.  This caused memory leak
@@ -116,6 +118,7 @@ var getDataFromFile  = function (db, filepath) {
         (function () {
             // process line here and call s.resume() when rdy
           if (!line.match(/^#/)) {
+            if(CmdLineOpts.newOnly){line=line.replace("0/0","./.")}
             processLines(line, lineNum, db, function () {
                 //console.log(lineNum)
             });

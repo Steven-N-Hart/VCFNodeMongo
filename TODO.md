@@ -1,7 +1,6 @@
 ###VCF_import
 1.  Make sure we don't overwrite positive calls with negative ones if the sample exists.
 2.  Only add GTC if it isnt provided
-3.  Need to limit the amount of lines allowed to read in, otherwise I run out of RAM.
 
 ###VCF_export
 1.  Validate large file output
@@ -14,17 +13,10 @@
 3. add to annotation object
  
 ###Server
-1.  Get Authentication (OAuth/OmniAuth - Google only for now)
+1.  Get Authentication 
 2.  Authorization
 3.  Admin role in config.json
 
 ###APIs
-1.
-2.
-
-###Possible Names?
-1. Poly-Mut-Cache
-2. Variant-Arcade
-3. VCF-Stash
-4. Collated-Var-Index
-5. Joint-Genetic-Store
+1.  
+2.  

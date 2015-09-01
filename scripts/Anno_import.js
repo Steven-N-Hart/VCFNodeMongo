@@ -19,7 +19,7 @@ var VariantRecord = require('./VariantRecord.js');
  */
 CmdLineOpts
     .version('0.0.1')
-    .usage('[options] -i <file> -n studyname')
+    .usage('[options] -i <file> ')
     .option('-i, --input [file]', 'TSV file to be processed')
     .parse(process.argv);
 var ts1 = process.hrtime();
@@ -116,7 +116,7 @@ function mongoSet(db,queryObj,lineObj){
 	var collection = db.collection(config.names.variant);
 	//console.log(JSON.stringify(queryObj))
 	//console.log(JSON.stringify({annotation:lineObj}))
-	collection.update(queryObj,{$set: {annotation:lineObj}},{upsert:true},
+	collection.update(queryObj,{$set: {annotation:lineObj},$unset:{needsAnnotation:1}},{upsert:true},
   	function(err, object) {
       if (err){
           console.warn(err.message);  // returns error if no matching object found
