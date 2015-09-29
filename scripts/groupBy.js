@@ -14,8 +14,8 @@ CmdLineOpts
     .option('-g, --groupBy [group]', 'Meta field to group results by')
     .option('-x, --excludeSamples [samples]', 'comma seperated list of samples to exclude','na')
     .option('-f, --filterSampleInfo [filters]', '-f "GT = 0/1" -f "DP > 10"',collect, [])
-		.option('-a, --annotationFilters [filters]', '-a "AC > 0" -a "CAVA_IMPACT = HIGH|MODERATE"', collect, [])
-		.option('-A, --annotationExport [data2export]', '-A AC -A CAVA_IMPACT -A chr -A pos -A ref -A alt', collect, [])
+    .option('-a, --annotationFilters [filters]', '-a "AC > 0" -a "CAVA_IMPACT = HIGH|MODERATE"', collect, [])
+    .option('-A, --annotationExport [data2export]', '-A AC -A CAVA_IMPACT -A chr -A pos -A ref -A alt', collect, [])
     .parse(process.argv);
 
 var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
