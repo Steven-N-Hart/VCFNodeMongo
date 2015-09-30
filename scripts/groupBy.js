@@ -4,7 +4,7 @@ var CmdLineOpts = require('commander');
 var MongoClient = require('mongodb').MongoClient;
 var config = require('./config.json');
 var assert = require('assert');
-var _ = require('underscore');
+//var _ = require('underscore');
 /*
  * Setup Commandline options, auto generates help
  */
@@ -21,8 +21,8 @@ CmdLineOpts
 var url = 'mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name;
 MongoClient.connect(url, function (err, db) {
 	assert.equal(null, err);
-	var collection = db.collection(config.names.sample);
-	filterAnnotations(collection,db)
+	//var collection = db.collection(config.names.sample);
+	filterAnnotations(db)
 	})
 
 function collect(val, memo) {
@@ -36,15 +36,31 @@ function collect(val, memo) {
 // exclude unwanted samples
 // aggregate results
 // write out file
+/*
+Assuming this command:
+groupBy.js -g STATUS -a "CAVA_TYPE = Substitution" -a "AC > 0" -f "DP > 0"
+I expect the following query
 
-var filterAnnotations = function(collection, db){
+
+
+*/
+
+
+
+if (typeof excludeSamples === null){
+	//Sets a dummy variable so that I am always excluding something
+	// It won't work if you don't and I havent figured out why yet
+	excludeSamples=1
+}
+
+var filterAnnotations = function(db){
 	var q = []
 	var filters = CmdLineOpts.annotationFilters
 	if (filters.length === 0){
 		//go to next step
 		console.log('no filter applied, moving to next step')
 		q = q +'{unwind: "$samples"}'
-		filterSamples(q, collection, db)
+		filterSamples(q, db)
 		//process.exit()
 	} else {
 		//deconstruct the query
@@ -61,20 +77,22 @@ var filterAnnotations = function(collection, db){
 				filterQuery.push(preCheck)
 				//process.exit()
 		} // end for loop
+		// q is for annotation filters
 		q = filterQuery.join(',')
 		//console.log(q)
-		filterSamples(q, collection, db)
+		filterSamples(q, db)
 		//process.exit()
 	}
 }
 
-var filterSamples = function(q, collection, db){
+var filterSamples = function(q, db){
 var filters = CmdLineOpts.filterSampleInfo
+//p is sample level filters
 var p =''
 	if (filters === 0){
 		//console.log('No sample level filters applied')
 		//process.exit()
-		excludeSamples(p,collection, db)
+		getSamples(p, db)
 	} else {
 		//deconstruct the query	
 		var filterQuery = []
@@ -91,7 +109,7 @@ var p =''
 				//process.exit()
 		} // end for loop
 		p = filterQuery.join(',')
-		 excludeSamples(q,p,collection, db)
+		 getSamples(q, p, db)
 		//process.exit()
 	}
 }
@@ -152,78 +170,77 @@ var defineOperator = function(operator){
 }
 
 
+var getSamples = function(q, p, db){
+  var collection = db.collection(config.names.sample);
+  /* Need to get the sampleIDs (excluding any if specified) grouped by the aggregation key
+  In this case, the feature that I want to group by is the STATUS attribute in the meta field
+   The command should look like this if there aren't any sample exclusions:
 
-var excludeSamples = function(q, p, collection, db){
-	//get samples
-	//db.meta.find({STATUS:{$exists:true}},{_id:1})
-	var SAMPLES = [];
-	var key = CmdLineOpts.groupBy
-	var sampleQuery = {}
-	var exists =  {}
-	exists['$exists'] = true
-	sampleQuery[key] = exists
-		//console.log(sampleQuery)
-	var id={}
-	id['_id'] = 1
-	var SampleArray=[]
-	var excludedSamples =[]
+   db.meta.aggregate(
+   [
+     { $match : { STATUS: { $exists: true}  }}, 
+     { $group : { _id : "$STATUS", samples: { $push: "$_id" } } }
+   ]
+	)
+		Otherwise, if there are samples to be excluded, the query should look like this:
+
+	db.meta.aggregate(
+   [
+     { $match : { qty: { $exists: true, $nin: [ 'SAMPLE LIST'] } } } ,
+     { $group : { _id : "$STATUS", samples: { $push: "$_id" } } }
+   ]
+	)
+	*/
+			//build a JSON instead of the string
+
+  var aggregationQuery = {}
+  var featureObj = {}
+  var existsObj = {}
+	var matchObj = {}
+	var samplesObj = {}
+	var idObj = {}
+	var groupObj = {}
+	existsObj['$exists'] = true
 	if(CmdLineOpts.excludeSamples){
-	 excludedSamples = CmdLineOpts.excludeSamples.split(',')
-	}
-	//process.exit()
-	collection.find(sampleQuery).toArray(function(err, docs){
-		for (var i=0;i<docs.length;i++){
-     		SampleArray.push(docs[i]._id)
-			}
-	//console.log('Excluding samples: ', excludedSamples)
-	//console.log('Before: ',SampleArray)
-	var samplesToKeep=[]
-	//exclude specified samples
-	//console.log('SampleArray.length: ',SampleArray.length)
-	for (var i=0; i< SampleArray.length; i++){
-		var keep = 1
-		for (var j=0;j<excludedSamples.length;j++){
-			if (SampleArray[i] == excludedSamples[j]){
-				keep = 0
-			}
-		if (keep === 1){
-			samplesToKeep.push('"'+SampleArray[i]+'"')
-			}
-		}
-	}
+		var excludedSamples = CmdLineOpts.excludeSamples.split(/,/)
+		existsObj['$nin'] = excludedSamples
+	} 
+	matchObj[CmdLineOpts.groupBy] = existsObj
+	featureObj['$match'] = matchObj
+	//console.log(JSON.stringify(featureObj))
+
+	//clear out the samples obj
+	samplesObj = {}
+	samplesObj['$push']= "$_id"
+
+	groupObj['_id']="$"+CmdLineOpts.groupBy
+	groupObj['samples'] = samplesObj
+	var group2 = {}
+	group2['$group'] = groupObj
+  //process.exit()
+  var sampleObj = collection.aggregate([featureObj, group2])
 	
-	console.log('After: ',samplesToKeep,q)
-	var samples ='}},{$unwind: "$samples"},{$match:{"samples.sample_id":{$in:['+samplesToKeep+']},'+p+'}'
-	q = q+samples
-	q ='{$match:{'+q+'}'
-	getGroupKeys(q,db)
-	// group results
-	//process.exit()
-	}
-	) // done with adding samples	
+	// Get all the aggregation results
+	sampleObj.toArray(function(err, docs) {
+		console.log('sampleObject = ',docs)
+	  console.log('sample-level filters = ', p)
+ 		console.log('annotation-level filters = ', q)
+ 		var fieldsToProject = buildAnnotationsForExport()
+ 		console.log('fieldsToProject = ',fieldsToProject)
+ 		console.log('Died at line 230.  Need to figure out how to do the join and what the full query should look like')
+  	process.exit()
+	})
 
 }
 
 
-var getGroupKeys = function(queryString,db){
-		//get back what I want to project
-		var fieldsToProject = buildAnnotationsForExport(db)
-		var collection = db.collection(config.names.sample);
-		var key = '"'+CmdLineOpts.groupBy+'"'
-		//console.log(collection)
-		console.log(queryString,fieldsToProject)
-		process.exit()
-
-}
-
-
-var buildAnnotationsForExport = function(db){
-	var string = '{_id:0, '
+var buildAnnotationsForExport = function(){
+	var string = '{_id:0, chrom:1, pos:1, ref:1, alt:1 '
 	var array = CmdLineOpts.annotationExport
 		if(array.length > -1){
 			for (var i=0;i< array.length; i ++){
-				if(i==0){string = string+array[i] + ':1'}
-					else{string = string+ ', '+array[i] + ':1'}
+				if(i==0){string = string+', annotation.'+array[i] + ':1'}
+					else{string = string+', annotation.'+array[i] + ':1'}
 			}
 		}
 		string = string+'}'
