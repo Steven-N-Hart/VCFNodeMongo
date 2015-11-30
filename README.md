@@ -21,9 +21,6 @@ Scripts I have right now:
 
 This script takes a VCF and imports it into the mongodb database.  I had to bump up the memory so it wouldn't die.  Probably don't need it since I added the index (Thanx Dan Q).
 
-* Known issues:
-		Doesn't automatically close when finished
-
 #### 2. Exporting Variants
 ```Usage: node scripts/VCF_export.js -S [study names] [outname] ```
 
@@ -50,8 +47,5 @@ This script gets all variants from the DB that need annotation
 
 This script adds annotations to the variant DB from a TSV file.  It requires the first 4 coulmns to be "#CHROM POS REF ALT". 
 
-#### 6. Server
-After the install process is over, you'll be able to run your application using Grunt, just run grunt default task:
-``` $ grunt ```
-Your application should run on the 3000 port so in your browser just go to [http://localhost:3000](http://localhost:3000)
+
 

@@ -3,7 +3,7 @@
     "url" : "mongodb://localhost:27017/dev",
     "host" : "localhost",
     "port" : "27017",
-    "name" : "mydb_dev"
+    "name" : "dev"
   },
   "names" : {
     "variant" : "variants",

@@ -1,5 +1,5 @@
-#CHROM	POS	REF	ALT	noTCGA_ExAc.INFO.AC_NFE	noTCGA_ExAc.INFO.AC	CAVA_IMPACT	CAVA_TYPE	CAVA_GENE	CAVA_ENST	CAVA_CSN	CAVA_CLASS	CAVA_SO
-22	16056518	G	A	2	4	LOW	Substitution	NoGene	NoENST	NoCSN	NoClass	NoSO
-20	14371	A	G	.	.	LOW	Substitution	.	.	.	.	.
-20	14372	A	G	.	.	LOW	Substitution	.	.	.	.	.
-22	14373	C	T	.	.	LOW	Substitution	.	.	.	.	.
+#CHROM	POS	REF	ALT	AC	noTCGA_ExAc.INFO.AC_NFE	noTCGA_ExAc.INFO.AC	CAVA_IMPACT	CAVA_TYPE	CAVA_GENE	CAVA_ENST	CAVA_CSN	CAVA_CLASS	CAVA_SO
+22	16056518	G	X	5	2	4	LOW	Substitution	NoGene	NoENST	NoCSN	NoClass	NoSO
+20	14371	A	G	.	.	0 LOW	Substitution	.	.	.	.	.
+20	14372	A	G	.	.	1 LOW	Substitution	.	.	.	.	.
+22	14373	C	T	.	.	2 LOW	Substitution	.	.	.	.	.

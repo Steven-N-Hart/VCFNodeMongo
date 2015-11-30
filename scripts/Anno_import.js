@@ -132,7 +132,7 @@ function mongoSet(db,queryObj,lineObj){
   for (var i = 0; i < arr1.length; ++i){
   	//skip blanks and '.' values
   	if(arr2[i] && !arr2[i].match(/^\.$/) ){
-  		rv[arr1[i]]=arr2[i]
+  		rv[arr1[i]]=numberOrStringSingle(arr2[i])
   	}
   }
   return rv;

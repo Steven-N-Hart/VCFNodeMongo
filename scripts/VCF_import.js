@@ -10,9 +10,6 @@ var config = require('./config.json');
 var VariantRecord = require('./VariantRecord.js');
 var fs = require('fs');
 
-//var logger = require('./winstonLog');
-//        ///   logger.info('log to file');
-
 /*
  * Setup Commandline options, auto generates help
  */

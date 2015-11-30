@@ -23,6 +23,6 @@
 ##SAMPLE=<ID=Sample1,Assay=WholeGenome,Ethnicity=AFR,Disease=None,Description="Patient germline genome from unaffected",DOI=url>
 ##SAMPLE=<ID=Sample2,Assay=Exome,Ethnicity=CEU,Disease=Cancer,Tissue=Breast,Description="European patient exome from breast cancer">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EX1	EX2	EX3
-22	16056518	rs6054257	G	A	29	PASS	NS=3;DP=14;AF=0.5;DB;H2	GT:GQ:DP:HQ	./.	0|1:48:8:51,51	0/1:43:5:.,.
+22	16056518	rs6054257	G	A	29	PASS	NS=3;DP=14;AF=0.5;DB;H2	GT:GQ:DP:HQ	0/0:99:99;99,99	0|1:48:8:51,51	0/1:43:5:.,.
 16	33056518	rs605577	T	A	29	PASS	NS=3;DP=14;AF=0.5;DB;H2	GT:GQ:DP:HQ	./.	0|1:48:8:51,51	0/1:33:5:.,.
 ##16	33056518	rs605577	T	A,G 29	PASS	NS=3;DP=14;AF=0.5;DB;H2	GT:GQ:DP:HQ	./.	0|1:48:8:51,51	0/1:43:5:.,.
