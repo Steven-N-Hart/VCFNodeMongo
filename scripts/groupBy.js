@@ -57,10 +57,11 @@ if (typeof excludeSamples === null){
 var filterAnnotations = function(db){
 	var q = {}
 	var filters = CmdLineOpts.annotationFilters
+	//console.log('filters.length = ',filters.length, 'CmdLineOpts.annotationFilters: ', CmdLineOpts.annotationFilters)
 	if (filters.length === 0){
 		//go to next step
 		console.log('no filter applied, moving to next step')
-		q['unwind'] = "$samples";
+		//q['unwind'] = "$samples";
 		filterSamples(q, db)
 		//process.exit()
 	} else {
@@ -214,27 +215,6 @@ var defineOperator = function(operator){
 
 var getSamples = function(q, p, db){
   var collection = db.collection(config.names.sample);
-  /* Need to get the sampleIDs (excluding any if specified) grouped by the aggregation key
-  In this case, the feature that I want to group by is the STATUS attribute in the meta field
-   The command should look like this if there aren't any sample exclusions:
-
-   db.meta.aggregate(
-   [
-     { $match : { STATUS: { $exists: true}  }}, 
-     { $group : { _id : "$STATUS", samples: { $push: "$_id" } } }
-   ]
-	)
-		Otherwise, if there are samples to be excluded, the query should look like this:
-
-	db.meta.aggregate(
-   [
-     { $match : { qty: { $exists: true, $nin: [ 'SAMPLE LIST'] } } } ,
-     { $group : { _id : "$STATUS", samples: { $push: "$_id" } } }
-   ]
-	)
-	*/
-			//build a JSON instead of the string
-
   var aggregationQuery = {}
   var featureObj = {}
   var existsObj = {}
@@ -250,7 +230,6 @@ var getSamples = function(q, p, db){
 	matchObj[CmdLineOpts.groupBy] = existsObj
 	featureObj['$match'] = matchObj
 	//console.log(JSON.stringify(featureObj))
-
 	//clear out the samples obj
 	samplesObj = {}
 	samplesObj['$push']= "$_id"
@@ -260,6 +239,9 @@ var getSamples = function(q, p, db){
 	var group2 = {}
 	group2['$group'] = groupObj
   //process.exit()
+  //console.log('featureObj',JSON.stringify(featureObj))
+  //console.log('group2',JSON.stringify(group2))
+	//process.exit()
   var sampleObj = collection.aggregate([featureObj, group2])
 	
 	getVariantCounts(sampleObj,p, q, db);
@@ -281,35 +263,67 @@ var buildAnnotationsForExport = function(){
 }
 
 
-var getVariantCounts = function(sampleObj,p, q,db){
+var getVariantCounts = function(sampleObj, p, q, db){
 	// Get all the aggregation results
+	var collection = db.collection(config.names.variant);	
+	//The sampleObj contains the results of the aggregation query [which is just the groups of samples]
+	sampleObj.toArray(function(err, groups) {
+		//console.log(groups) //groups is an array of group objects that has the group name and the samples that group contains
+		// for each group, the name is the _id (e.g. case or control), then there is an array of sample names
+		//First, do a query on the variant
+		//console.log('here is q',JSON.stringify(q))
+		var countsArray = []
+		collection.find(q).toArray(function(err2, variants){
+			//console.log('vars = ', variants)
+			for (var groupNum=0; groupNum<groups.length; groupNum++){
+				// We need to find out which samples in each group have the variant in question
+				var counts = {}
+				//console.log('samples in group = ',groups[groupNum])
+				for (var sampleNum=0; sampleNum<variants[0].samples.length; sampleNum++){
+
+					var sampleName = variants[0].samples[sampleNum].sample_id
+					var GTC = variants[0].samples[sampleNum].GTC
+					var groupNames = []
+					var groupNames = groups[groupNum].samples
+					// See if this sample is in my group or not
+					var genotypeCounts = []
+					var samplesInGroup = []
+					counts['_id'] = groups[groupNum]._id
+
+					for (var s=0; s<groupNames.length; s++){
+						if (groupNames[s] == sampleName){
+							//console.log('there is a match')
+							genotypeCounts.push(GTC)
+							samplesInGroup.push(sampleName)
+							var gc = genotypeCounts.reduce(function(a, b) { return a + b; }, 0) /  genotypeCounts.length;
+							counts['GTC'] = gc
+							counts['samples'] = samplesInGroup
+						}
+					}
+				}	
+			countsArray.push(counts)
+			// Counts now contains samples in each group
+			}// end the group count
+		console.log(countsArray)
+		// Now I have the group_ids, samples with mutations, and genotype count per group
+		// I have to print out the chrom/pos/ref/alt/ and annotations
+		/*
 	
-	sampleObj.toArray(function(err, docs) {
-		for (var i=0; i<docs.length;i++){
-			console.log(docs[i]._id);
-			var samples = docs[i].samples
-			//console.log('looking for samples: ',docs[i].samples);
- 			var collection = db.collection(config.names.variant);
- 			console.log('annotation-level filters = ', JSON.stringify(q),'\n');
- 			// Filter by annotation first 
- 			collection.find(q).toArray(function(err, docs) {
- 				console.log('docs =', docs)
- 			});
+			START HERE 
+		
+		*/
 
- 		}
+		//process.exit()
+		})// end the array of the find query
 
+	})// end the sampleObj2Array
+ 
+ };
+	//console.log('sample-level filters = ', JSON.stringify(p))
+	//console.log('annotation-level filters = ', JSON.stringify(q))
+	//var fieldsToProject = buildAnnotationsForExport()
+ 	//console.log('fieldsToProject = ',fieldsToProject)
 
-
-
-		//console.log('sampleObject = ',docs)
-
-	  //console.log('sample-level filters = ', JSON.stringify(p))
-	  //console.log('annotation-level filters = ', JSON.stringify(q))
-	  //var fieldsToProject = buildAnnotationsForExport()
- 		//console.log('fieldsToProject = ',fieldsToProject)
-	})
-
-}
 
 var numberOrStringSingle = function (x) {
     var result = '';

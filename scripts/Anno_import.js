@@ -97,7 +97,7 @@ function readAll(line){
   				var lineObj=toObject(headerArray,lineArray)
   				//console.log(JSON.stringify(lineObj))
   				var queryObj={}
-  				queryObj['chr']=lineObj['chr']
+  				queryObj['chr']=String(lineObj['chr'])
   				queryObj['pos']=numberOrStringSingle(lineObj['pos'])
   				queryObj['ref']=lineObj['ref']
   				queryObj['alt']=lineObj['alt']
@@ -114,7 +114,7 @@ function readAll(line){
 
 function mongoSet(db,queryObj,lineObj){
 	var collection = db.collection(config.names.variant);
-	//console.log(JSON.stringify(queryObj))
+	console.log(JSON.stringify(queryObj))
 	//console.log(JSON.stringify({annotation:lineObj}))
 	collection.update(queryObj,{$set: {annotation:lineObj},$unset:{needsAnnotation:1}},{upsert:true},
   	function(err, object) {
