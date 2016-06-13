@@ -60,7 +60,7 @@ var filterAnnotations = function(db){
 	//console.log('filters.length = ',filters.length, 'CmdLineOpts.annotationFilters: ', CmdLineOpts.annotationFilters)
 	if (filters.length === 0){
 		//go to next step
-		console.log('no filter applied, moving to next step')
+		console.log('no annotation filter applied, moving to next step')
 		//q['unwind'] = "$samples";
 		filterSamples(q, db)
 		//process.exit()
@@ -91,12 +91,13 @@ var filterSamples = function(q, db){
 var filters = CmdLineOpts.filterSampleInfo
 //p is sample level filters
 var p = {}
-	if (filters === 0){
+	if (filters.length === 0){
 		console.log('No sample level filters applied')
 		//process.exit()
-		getSamples(p, db)
+		getSamples(q, p, db)
 	} else {
 		//deconstruct the query	
+		//console.log('This assumes sample filter is set ', filters)
 		var filterQuery = {}
 		for (var i=0;i<filters.length;i++){
 				var array = filters[i].split(/(<=|>=|!=|=|>|<)/,3)
@@ -243,7 +244,6 @@ var getSamples = function(q, p, db){
   //console.log('group2',JSON.stringify(group2))
 	//process.exit()
   var sampleObj = collection.aggregate([featureObj, group2])
-	
 	getVariantCounts(sampleObj,p, q, db);
 
 }
@@ -267,12 +267,14 @@ var getVariantCounts = function(sampleObj, p, q, db){
 	// Get all the aggregation results
 	var collection = db.collection(config.names.variant);	
 	//The sampleObj contains the results of the aggregation query [which is just the groups of samples]
+	var countsArray = []
 	sampleObj.toArray(function(err, groups) {
 		//console.log(groups) //groups is an array of group objects that has the group name and the samples that group contains
 		// for each group, the name is the _id (e.g. case or control), then there is an array of sample names
 		//First, do a query on the variant
 		//console.log('here is q',JSON.stringify(q))
-		var countsArray = []
+		//console.log('GROUPS: ',groups)
+		
 		collection.find(q).toArray(function(err2, variants){
 			//console.log('vars = ', variants)
 			for (var groupNum=0; groupNum<groups.length; groupNum++){
@@ -280,7 +282,6 @@ var getVariantCounts = function(sampleObj, p, q, db){
 				var counts = {}
 				//console.log('samples in group = ',groups[groupNum])
 				for (var sampleNum=0; sampleNum<variants[0].samples.length; sampleNum++){
-
 					var sampleName = variants[0].samples[sampleNum].sample_id
 					var GTC = variants[0].samples[sampleNum].GTC
 					var groupNames = []
@@ -300,24 +301,17 @@ var getVariantCounts = function(sampleObj, p, q, db){
 							counts['samples'] = samplesInGroup
 						}
 					}
+				countsArray.push(counts)
+				//console.log(counts)
 				}	
-			countsArray.push(counts)
+			//countsArray.push(counts)
 			// Counts now contains samples in each group
 			}// end the group count
-		console.log(countsArray)
-		// Now I have the group_ids, samples with mutations, and genotype count per group
-		// I have to print out the chrom/pos/ref/alt/ and annotations
-		/*
-	
-			START HERE 
-		
-		*/
-
-		//process.exit()
 		})// end the array of the find query
+	})// end the sampleObj2Array which just defines the sample groups
+ 	//This is where I need to get variant-level data
+ console.log(countsArray)
 
-	})// end the sampleObj2Array
- 
  };
 	//console.log('sample-level filters = ', JSON.stringify(p))
 	//console.log('annotation-level filters = ', JSON.stringify(q))
